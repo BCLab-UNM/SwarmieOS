@@ -137,7 +137,7 @@ class Swarmie(object):
         self.info_publisher = None
         self.mode_publisher = None
         self.finger_publisher = None
-        self.wrist_publisher = None
+        self.tray_publisher = None
 
         self.block_size = None
 
@@ -219,7 +219,7 @@ class Swarmie(object):
         self.info_publisher = rospy.Publisher('/infoLog', String, queue_size=10, latch=True)
         self.mode_publisher = rospy.Publisher('mode', UInt8, queue_size=1, latch=True)
         self.finger_publisher = rospy.Publisher('fingerAngle/cmd', Float32, queue_size=1, latch=True)
-        self.wrist_publisher = rospy.Publisher('wristAngle/cmd', Float32, queue_size=1, latch=True)
+        self.tray_publisher = rospy.Publisher('wristAngle/cmd', Float32, queue_size=1, latch=True)
 
         # Wait for necessary services to be online. 
         # Services are APIs calls to other neodes. 
@@ -545,14 +545,14 @@ class Swarmie(object):
 
         return self.__drive(req, **kwargs)
                 
-    def set_wrist_angle(self, angle):
-        '''Set the wrist angle to the specified angle
+    def set_tray_angle(self, angle):
+        '''Set the tray angle to the specified angle
         
         Args:
         
         * `angle` (`float`) Wrist angle in radians. 
         '''
-        self.wrist_publisher.publish(Float32(angle))
+        self.tray_publisher.publish(Float32(angle))
 
     def set_finger_angle(self, angle):
         '''Set the finger angle to the spedified angle
@@ -563,17 +563,19 @@ class Swarmie(object):
         '''
         self.finger_publisher.publish(Float32(angle))
         
-    def wrist_down(self):
-        '''Lower the wrist to put it in the pickup position'''
-        self.wrist_publisher.publish(Float32(1.25))
+    def tray_down(self):
+        '''Lower the tray to put it in the pickup position'''
+        for angle in [0.5, 0.375, 0.25, 0.125 , 0.0]:
+            self.tray_publisher.publish(Float32(angle))
+            rospy.sleep(0.5)
     
-    def wrist_up(self):
-        '''Raise the wrist to the top'''
-        self.wrist_publisher.publish(Float32(0.0))
+    def tray_up(self):
+        '''Raise the tray to the top'''
+        self.tray_publisher.publish(Float32(0.7))
     
-    def wrist_middle(self):
-        '''Put the wrist in the middle of its travel so that the rover can drive with a block'''
-        self.wrist_publisher.publish(Float32(0.75))
+    def tray_middle(self):
+        '''Put the tray in the middle of its travel so that the rover can drive with a block'''
+        self.tray_publisher.publish(Float32(0.5 ))
 
     def fingers_open(self):
         '''Open the fingers'''
@@ -606,24 +608,24 @@ class Swarmie(object):
         
         Uses the algorithm:
 
-        * Put wrist down to a middle position. Can help avoid any sun glare or \
-          shadows seen in wrist up position (This skipped in the simulation \
+        * Put tray down to a middle position. Can help avoid any sun glare or \
+          shadows seen in tray up position (This skipped in the simulation \
           because there is no sun glare).
         * Check if we can see a block that's close to the camera. If so, return `True`
-        * Raise the wrist all the way up.
+        * Raise the tray all the way up.
         * Check if the center sonar is blocked at a close distance. If so, return `True`
         * Check if we can see a block that's very close. If so, return `True`
         * Return `False`
         '''
         if self.simulator_running():
-            wrist_angles = (0.3, 0.0)
+            tray_angles = (0.3, 0.0)
             max_z_dist = 0.13 #0.151+ is the top of the cube on the ground in the sim
         else:
-            wrist_angles = (0.55, 0.0)
+            tray_angles = (0.55, 0.0)
             max_z_dist = 0.18
         
-        for angle in wrist_angles:
-            self.set_wrist_angle(angle)
+        for angle in tray_angles:
+            self.set_tray_angle(angle)
             rospy.sleep(1)
             blocks = self.get_targets_buffer(age=1, id=0)
             blocks = sorted(blocks, key=lambda x: abs(x.pose.pose.position.z))
