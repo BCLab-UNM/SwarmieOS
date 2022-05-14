@@ -32,7 +32,7 @@ trap finish EXIT
 
 cd $TEMPDIR
 pwd
-source /opt/ros/kinetic/setup.bash
+source /opt/ros/noetic/setup.bash
 ./misc/rover_onboard_calibration.sh 
 
 EOF

@@ -73,7 +73,7 @@ trap finish EXIT
 
 cd $TEMPDIR
 pwd
-source /opt/ros/kinetic/setup.bash
+source /opt/ros/noetic/setup.bash
 source ./install/setup.bash
 ./misc/rover_onboard_node_launch.sh $skip_arduino
 

@@ -66,7 +66,7 @@ fi
 
 if [ -f $projdir/devel/setup.bash ]; then
     echo "deploy_host.sh not called assuming rover_onboard_node_launch"
-    source /opt/ros/kinetic/setup.bash
+    source /opt/ros/noetic/setup.bash
     source $projdir/devel/setup.bash
 fi
 export ROS_HOSTNAME=$HOSTNAME.local
