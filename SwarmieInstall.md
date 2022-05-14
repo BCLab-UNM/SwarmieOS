@@ -1,7 +1,7 @@
-This guide takes you through the installation of Ubuntu 16.04 server on a swarmie. 
+This guide takes you through the installation of Ubuntu 20.04 server on a swarmie. 
 
 You'll need the following: 
-1. A USB bood flash with Ubuntu 16.04 LTS
+1. A USB bood flash with Ubuntu 20.04 LTS
 2. A monitor that accepts HDMI and a cable. 
 3. A keyboard (mouse optional)
 4. A wired network connection
@@ -80,7 +80,7 @@ sudo apt-get update
 ```
 Now you can install all of ROS: 
 ```
-sudo apt-get install ros-kinetic-desktop-full
+sudo apt-get install ros-noetic-desktop-full
 ```
 This will take a while! After it's done you need to initizlize ROS:
 ```
@@ -89,12 +89,12 @@ rosdep update
 ```
 Now make sure that the robot user knows where to find ROS files:
 ```
-echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc
+echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 source ~/.bashrc
 ```
 Now install catkin and other ROS tools and libraries:
 ```
-sudo apt-get install python-catkin-tools ros-kinetic-robot-localization ros-kinetic-hector-gazebo-plugins ros-kinetic-joystick-drivers avahi-daemon ros-kinetic-zeroconf-avahi ros-kinetic-video-stream-opencv emacs-nox
+sudo apt-get install python-catkin-tools ros-noetic-robot-localization ros-noetic-hector-gazebo-plugins ros-noetic-joystick-drivers avahi-daemon ros-noetic-zeroconf-avahi ros-noetic-video-stream-opencv emacs-nox
 ```
 
 # Install Cryptographic Secrets

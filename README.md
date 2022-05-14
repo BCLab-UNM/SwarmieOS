@@ -17,7 +17,7 @@ This repository contains:
 - [Quick Start Installation Guide](#quick-start-installation-guide)
     - [Summary](#summary)
     - [Detail](#detail)
-        - [1. Install ROS Kinetic Kame](#1-install-ros-kinetic-kame)
+        - [1. Install ROS Noetic](#1-install-ros-noetic)
         - [2. Install additional packages](#2-install-additional-packages)
         - [3. Clone the repository and build](#3-clone-the-repository-and-build)
         - [4. Run the simulation](#4-run-the-simulation)
@@ -39,17 +39,17 @@ This repository contains:
 
 ## Quick Start Installation Guide
 
-SwarmBaseCode-ROS is designed and tested exclusively on the 64 bit version of Ubuntu 16.04 LTS (Xenial Xerus) and ROS Kinetic Kame. Other systems are untested and are therefore not supported at this time.
+SwarmBaseCode-ROS is designed and tested exclusively on the 64 bit version of Ubuntu 20.04 LTS (Focal Fossa) and ROS Noetic. Other systems are untested and are therefore not supported at this time.
 
 Be sure you are using the latest drivers for your video card using the "additional drivers tool" in Ubuntu. Gazebo client often does not do well with the open source drivers.
 
 ![Alt text](readmeImages/InstallGraphics.png "Additional Drivers")
 
 ### Summary
-1. Install ROS Kinetic. Instructions below in the detailed guide.
+1. Install ROS noetic. Instructions below in the detailed guide.
 2. Install dependencies, clone and build.
     ```bash
-    sudo apt install python-rosinstall python-catkin-tools ros-kinetic-robot-localization ros-kinetic-hector-gazebo-plugins ros-kinetic-joystick-drivers ros-kinetic-grid-map ros-kinetic-rosserial-python ros-kinetic-rosserial-arduino ros-kinetic-usb-cam ros-kinetic-multimaster-fkie libusb-dev ipython
+    sudo apt install python-rosinstall python-catkin-tools ros-noetic-robot-localization ros-noetic-hector-gazebo-plugins ros-noetic-joystick-drivers ros-noetic-grid-map ros-noetic-rosserial-python ros-noetic-rosserial-arduino ros-noetic-usb-cam ros-noetic-multimaster-fkie libusb-dev ipython
     git clone --recursive git@github.com:BCLab-UNM/SwarmieOS.git
     cd SwarmieOS
     catkin build
@@ -57,9 +57,9 @@ Be sure you are using the latest drivers for your video card using the "addition
     ```
 
 ### Detail
-#### 1. Install ROS Kinetic Kame
+#### 1. Install ROS noetic
 
-Detailed instructions for installing ROS Kinetic Kame under Ubuntu 16.04 [here](http://wiki.ros.org/kinetic/Installation/Ubuntu) or follow the summarized instructions below:
+Detailed instructions for installing ROS noetic under Ubuntu 20.04 [here](http://wiki.ros.org/noetic/Installation/Ubuntu) or follow the summarized instructions below:
 
 ```
 sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
@@ -67,7 +67,7 @@ sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main
 sudo apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-key 421C365BD9FF1F717815A3895523BAEEB01FA116
 
 sudo apt update
-sudo apt install ros-kinetic-desktop-full
+sudo apt install ros-noetic-desktop-full
 sudo rosdep init
 rosdep update      # Note this is not run with sudo
 ```
@@ -78,7 +78,7 @@ Note: if you accidentally ran ```sudo rosdep update``` you can repair the permis
 ##### Environment Setup
 From ROS Wiki: It’s convenient if the ROS environment variables are automatically added to your bash session every time a new shell is launched:
 ```
-echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc
+echo "source /opt/ros/noetic/setup.bash" >> ~/.bashrc
 source ~/.bashrc
 ```
 
@@ -99,41 +99,41 @@ Most systems will already have usb development support installed, but just in ca
 We use [robot_localization](http://wiki.ros.org/robot_localization) for state estimation and sensor fusion:
 
 ```
-sudo apt install ros-kinetic-robot-localization
+sudo apt install ros-noetic-robot-localization
 ```
 
 In simulation, we use [hector_gazebo_plugins](http://wiki.ros.org/hector_gazebo_plugins) to provide sonar and IMU sensors:
 
 ```
-sudo apt install ros-kinetic-hector-gazebo-plugins
+sudo apt install ros-noetic-hector-gazebo-plugins
 ```
 
 The Swarmies can receive commands from the thumb sticks on a Microsoft Xbox 360 controller. The ROS [joystick_drivers](http://wiki.ros.org/joystick_drivers) package, which contains a generic Linux joystick driver compatible with this controller:
 
 ```
- sudo apt install ros-kinetic-joystick-drivers
+ sudo apt install ros-noetic-joystick-drivers
 ```
 
 Joystick commands can also be simulated using the direction keys (Up=I, Down=K, Left=J, Right=L) on the keyboard. The Rover GUI window must have focus for keyboard control to work.
 
 Install the usb camera driver, which runs on the physical rover:
 ```
-sudo apt install ros-kinetic-usb-cam
+sudo apt install ros-noetic-usb-cam
 ```
 
 Install ROS Serial, which is used to run the IMU calibration code:
 ```
-sudo apt install ros-kinetic-rosserial-python ros-kinetic-rosserial-arduino
+sudo apt install ros-noetic-rosserial-python ros-noetic-rosserial-arduino
 ```
 
 Install ROS Multimaster, which is used to sync the ROS graphs of each physical rover:
 ```
-sudo apt install ros-kinetic-multimaster-fkie
+sudo apt install ros-noetic-multimaster-fkie
 ```
 
 Install ROS Grid Map, which is used to build maps containing sonar-marked obstacles and locations of AprilTag detections:
 ```
-sudo apt install ros-kinetic-grid-map 
+sudo apt install ros-noetic-grid-map 
 ```
 
 Install IPython, which we use to help develop robot behavior code.
@@ -248,12 +248,12 @@ To close the simulation and the GUI, click the red exit button in the top left-h
 
 Source code can be found in the repository /src directory. This directory contains several subdirectories, each of which contain a single ROS package. Here we present a high-level description of each package.
 
-- `abridge`: A serial interface between SwarmBaseCode-ROS and the A-Star 32U4 microcontroller onboard the physical robot. In the simulation, `abridge` functionality is supplanted by `sbridge`, which interfaces with [gazebo_ros_skid_steer_drive](http://docs.ros.org/kinetic/api/gazebo_plugins/html/classgazebo_1_1GazeboRosSkidSteerDrive.html) (motor and encoders) and [hector_gazebo_plugins](http://wiki.ros.org/hector_gazebo_plugins) (sonar and IMU; see [step 3](https://github.com/BCLab-UNM/SwarmBaseCode-ROS/blob/master/README.md#3-install-additional-gazebo-plugins) of the Quick Start guide).
+- `abridge`: A serial interface between SwarmBaseCode-ROS and the A-Star 32U4 microcontroller onboard the physical robot. In the simulation, `abridge` functionality is supplanted by `sbridge`, which interfaces with [gazebo_ros_skid_steer_drive](http://docs.ros.org/noetic/api/gazebo_plugins/html/classgazebo_1_1GazeboRosSkidSteerDrive.html) (motor and encoders) and [hector_gazebo_plugins](http://wiki.ros.org/hector_gazebo_plugins) (sonar and IMU; see [step 3](https://github.com/BCLab-UNM/SwarmBaseCode-ROS/blob/master/README.md#3-install-additional-gazebo-plugins) of the Quick Start guide).
 - `rqt_rover_gui`: A Qt-based graphical interface for the physical and simulated robots. See [How to use Qt Creator](https://github.com/BCLab-UNM/SwarmBaseCode-ROS/blob/master/README.md#how-to-use-qt-creator-to-edit-the-simulation-gui) for details on this package.
 - `mobility`: The Swarmie control API, behaviors, helper functions, debug terminal, teleop and various other nodes.
 - `mapping`: The mapping node uses the [Grid Map](https://github.com/anybotics/grid_map) library to mark sonar obstacles and AprilTag resource locations on a map in the odometry coordinate frame. The node also provides a path-planning navigation service to the Python control code, using A* to find a path to a goal location, returning the path as a list of waypoints avoiding marked sonar obstacles.
 - `diagnostics`: A node monitoring sensor data, logging messages to the `rqt_rover_gui` so the user knows if any hardware is malfunctioning. This node can also stop the rover from moving if an unrecoverable hardware malfunction prevents the rover from receiving important sensor data.
-- `apriltags2_ros`: An image processor that detects [AprilTag](https://april.eecs.umich.edu/wiki/index.php/AprilTags) fiducial markers in the onboard camera’s video stream. This package receives images from the `usb_cam` node (for physical robots) or [gazebo_ros_camera](http://docs.ros.org/kinetic/api/gazebo_plugins/html/classgazebo_1_1GazeboRosCamera.html) (for simulated robots).
+- `apriltags2_ros`: An image processor that detects [AprilTag](https://april.eecs.umich.edu/wiki/index.php/AprilTags) fiducial markers in the onboard camera’s video stream. This package receives images from the `usb_cam` node (for physical robots) or [gazebo_ros_camera](http://docs.ros.org/noetic/api/gazebo_plugins/html/classgazebo_1_1GazeboRosCamera.html) (for simulated robots).
 - `ublox`: An unused dependency of `rqt_rover_gui`.
 
 ## Robot Behaviors
