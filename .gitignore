@@ -15,3 +15,6 @@ proj
 install
 misc/logs
 src/.idea
+
+build_isolated/
+devel_isolated/
