@@ -8,9 +8,9 @@
       <param name="image_height" value="240"/>
       <param name="framerate" value="10"/>
       <param name="pixel_format" value="yuyv"/>
-      <param name="camera_frame_id" value="$(arg name)/camera_link"/>
-      <remap from="/$(arg name)/camera/image_raw" to="/$(arg name)/camera/image"/>
-      <remap from="/$(arg name)/camera/camera_info" to="/$(arg name)/camera/info"/>
+      <param name="camera_frame_id" value="r9/camera_link"/>
+      <remap from="/r9/camera/image_raw" to="/r9/camera/image"/>
+      <remap from="/r9/camera/camera_info" to="/r9/camera/info"/>
     </node>
     
 </launch>
