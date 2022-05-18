@@ -45,4 +45,85 @@
       <param name="ff_l" value="0.0095" />
       <param name="ff_r" value="0.012" />
     </node>
+    
+    <node name="stfBase2Cam" pkg="tf2_ros" type="static_transform_publisher"
+          args="0.12 0.0 0.195 -1.570796 0 -2.09 base_link r9/camera_link" respawn="true">
+    </node>
+
+    <node name="stfBase2SL" pkg="tf2_ros" type="static_transform_publisher"
+        args="0.11 0.05 0.155 0.43633 0 0 base_link us_left_link"
+        respawn="true" />
+        
+    <node name="stfBase2SC" pkg="tf2_ros" type="static_transform_publisher"
+        args="0.12 0 0.155 0 0 0 base_link us_center_link"
+        respawn="true" />
+        
+    <node name="stfBase2SR" pkg="tf2_ros" type="static_transform_publisher"
+        args="0.11 -0.05 0.155 -0.43633 0 0 base_link us_right_link"
+        respawn="true" />
+    
+    <node name="ekfOdom" pkg="robot_localization" type="ekf_localization_node" respawn="false">
+    
+    <param name="odom_frame" value="/odom" />
+    <param name="world_frame" value="/odom" />
+    <param name="base_link_frame" value="/base_link"/>
+    
+    <param name="odom0" value="odom" />
+    <param name="imu0" value="imu" />
+    <param name="two_d_mode" value="true" />
+    <param name="frequency" value="10" />
+  
+    <param name="print_diagnostics" value="false"/>
+
+    <rosparam param="odom0_config">[false, false, false,
+                                    false, false, false,
+                                    true, true, false,
+                                    false, false, true,
+                                    false, false, false]</rosparam>
+
+    <rosparam param="imu0_config">[false, false, false, 
+                                   false, false, true,
+                                   false, false, false,
+                                   false, false, true,
+                                   false, false, false]</rosparam>
+
+    <rosparam param="initial_estimate_covariance">
+      [1e-9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 1e-9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 1e-9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 1e-9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 1e-9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 1e-9, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 1e-9, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 1e-9, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 1e-9, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 1e-9, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1e-9, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1e-9, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1e-9, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1e-9]
+    </rosparam>
+
+    <rosparam param="process_noise_covariance">
+      [7e-4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 7e-4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0.06, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0.03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0.03, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 1e-5, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0.025, 0, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0.025, 0, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0.04, 0, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0, 0,
+       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.01, 0,
+       0, 0, 0, 0, 0, 0, 0,  0,  0, 0, 0, 0, 0, 0, 0.015]
+    </rosparam>
+
+    <remap from="odometry/filtered" to="odom/filtered" />
+    
+  </node>
 </launch>
