@@ -32,4 +32,17 @@
           ]
         </rosparam>
     </node>
+    
+    <node name="abridge" pkg="bridge" type="abridge" respawn="true"> 
+      <param name="device" value="/dev/ttyACM0"/>
+      <param name="scale" value="0.1" />
+      <param name="Kp" value="0.0075" />
+      <param name="Ki" value="0.15" />
+      <param name="Kd" value="0.002" />
+      <param name="db" value="0.0" />
+      <param name="st" value="0.0" />
+      <param name="wu" value="3.0" />
+      <param name="ff_l" value="0.0095" />
+      <param name="ff_r" value="0.012" />
+    </node>
 </launch>
