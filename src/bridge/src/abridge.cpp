@@ -427,16 +427,23 @@ void parseData(string str) {
 			}
 			else if (dataSet.at(0) == "USL") {
 				sonarLeft.header.stamp = ros::Time::now();
+				//From https://www.pololu.com/product/1605
+				sonarLeft.max_range = 3; //in meters Test Value @TODO tune
+				sonarLeft.field_of_view = 0.698132; // in radians @TODO tune
 				sonarLeft.range = atof(dataSet.at(2).c_str()) / 100.0;
 			    sonarLeftPublish.publish(sonarLeft);
 			}
 			else if (dataSet.at(0) == "USC") {
 				sonarCenter.header.stamp = ros::Time::now();
+				sonarCenter.max_range = 3; //in meters Test Value @TODO tune
+				sonarCenter.field_of_view = 0.698132; // in radians @TODO tune
 				sonarCenter.range = atof(dataSet.at(2).c_str()) / 100.0;
 			    sonarCenterPublish.publish(sonarCenter);
 			}
 			else if (dataSet.at(0) == "USR") {
 				sonarRight.header.stamp = ros::Time::now();
+				sonarRight.max_range = 3; //in meters Test Value @TODO tune
+				sonarRight.field_of_view = 0.698132; // in radians @TODO tune
 				sonarRight.range = atof(dataSet.at(2).c_str()) / 100.0;
 			    sonarRightPublish.publish(sonarRight);
 			}
