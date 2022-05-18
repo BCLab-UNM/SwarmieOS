@@ -9,8 +9,6 @@
       <param name="framerate" value="10"/>
       <param name="pixel_format" value="yuyv"/>
       <param name="camera_frame_id" value="r9/camera_link"/>
-      <remap from="/r9/camera/image_raw" to="/r9/camera/image"/>
-      <remap from="/r9/camera/camera_info" to="/r9/camera/info"/>
     </node>
     
 </launch>
