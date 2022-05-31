@@ -22,8 +22,8 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
-#include <apriltags2to1/AprilTagDetectionArray.h>
-#include <apriltags2to1/AprilTagDetection.h>
+#include <apriltag_ros/AprilTagDetectionArray.h>
+#include <apriltag_ros/AprilTagDetection.h>
 #include <grid_map_ros/grid_map_ros.hpp>
 #include <grid_map_msgs/GridMap.h>
 #include <grid_map_ros/GridMapRosConverter.hpp>
@@ -82,7 +82,7 @@ void markSonar(const sensor_msgs::Range::ConstPtr&);
 void sonarHandler(const sensor_msgs::Range::ConstPtr&,
                   const sensor_msgs::Range::ConstPtr&,
                   const sensor_msgs::Range::ConstPtr&);
-void targetHandler(const apriltags2to1::AprilTagDetectionArray::ConstPtr&);
+void targetHandler(const apriltag_ros::AprilTagDetectionArray::ConstPtr&);
 void odometryHandler(const nav_msgs::Odometry::ConstPtr&);
 void inflateLayer(const grid_map::Index&, grid_map::Matrix&,
                   grid_map::Matrix&);
@@ -792,7 +792,7 @@ void sonarHandler(
  * 2. Update the target maps based on current detections.
  *
  */
-void targetHandler(const apriltags2to1::AprilTagDetectionArray::ConstPtr& message) {
+void targetHandler(const apriltag_ros::AprilTagDetectionArray::ConstPtr& message) {
     if (!params_configured) {
         return;
     }
@@ -907,7 +907,7 @@ void targetHandler(const apriltags2to1::AprilTagDetectionArray::ConstPtr& messag
 
             for (int i=0; i<message->detections.size(); i++) {
                 geometry_msgs::PoseStamped tagpose;
-                tf_l->transformPose(map_frame,
+                //@TODO fix this ******************************************************************************************
                                     message->detections[i].pose,
                                     tagpose);
 
@@ -918,11 +918,11 @@ void targetHandler(const apriltags2to1::AprilTagDetectionArray::ConstPtr& messag
 
                 // Only consider TAG_TARGET's far enough away from camera
                 // to avoid marking block in claw as an obstacle.
-                if (message->detections[i].id == 0 &&
-                    message->detections[i].pose.pose.position.z
+                if (message->detections[i].id[0] == 0 &&
+                    message->detections[i].pose.pose.pose.position.z
                         > map_cfg.tag_in_claw_dist) {
                     rover_map.at("target", ind) = 1;
-                } else if (message->detections[i].id == 256) {
+                } else if (message->detections[i].id[0] == 256) {
                     rover_map.at("home_raw", ind) = 1;
                 }
             }
@@ -933,12 +933,12 @@ void targetHandler(const apriltags2to1::AprilTagDetectionArray::ConstPtr& messag
         // Make sure Obstacle messages get published, so do this here, outside
         // the try/catch block for transforms
         for (int i=0; i<message->detections.size(); i++) {
-            if (message->detections[i].id == 0 &&
-                message->detections[i].pose.pose.position.z
+            if (message->detections[i].id[0] == 0 &&
+                message->detections[i].pose.pose.pose.position.z
                     > map_cfg.tag_in_claw_dist) {
                 next_status |= swarmie_msgs::Obstacle::TAG_TARGET;
             }
-            else if (message->detections[i].id == 256) {
+            else if (message->detections[i].id[0] == 256) {
                 next_status |= swarmie_msgs::Obstacle::TAG_HOME;
             }
         }
