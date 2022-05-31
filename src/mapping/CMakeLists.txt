@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
   sensor_msgs
-  apriltags2to1
+  apriltag_ros
   message_generation
   grid_map_ros
   grid_map_msgs
@@ -36,7 +36,7 @@ generate_messages(DEPENDENCIES std_msgs geometry_msgs nav_msgs)
 
 catkin_package(
   CATKIN_DEPENDS geometry_msgs roscpp sensor_msgs std_msgs
-  tf apriltags2to1 message_runtime
+  tf apriltag_ros message_runtime
   grid_map_ros grid_map_msgs 
   nav_msgs swarmie_msgs dynamic_reconfigure
 )
