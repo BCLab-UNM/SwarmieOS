@@ -7,7 +7,7 @@
     jpeg_quality: 10
   </rosparam>
 
-  <node name="apriltag" pkg="apriltags2_ros" type="apriltags2_ros_continuous_node"
+  <node name="apriltag" pkg="apriltag_ros" type="apriltag_ros_continuous_node"
         clear_params="true" respawn="true">
     
     <param name="camera_frame" value="$(arg name)/camera_link" />
