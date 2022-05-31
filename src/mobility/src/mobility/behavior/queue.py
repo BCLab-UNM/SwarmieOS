@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """Wait in the start queue until it's this rover's turn to do the
 init behavior.
 """

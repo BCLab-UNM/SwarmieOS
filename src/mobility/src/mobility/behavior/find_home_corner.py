@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """Find a corner of the home plate.
 
 This module provides an importable function that can be used in multiple

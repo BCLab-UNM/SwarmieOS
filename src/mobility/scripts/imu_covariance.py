@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """
 Listen to the /imu topic while the rover is not moving.
 

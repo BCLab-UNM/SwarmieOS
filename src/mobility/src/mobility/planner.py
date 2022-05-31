@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """
 Local Planner
 todo: raise HomeExceptions from Planner.drive_to()?

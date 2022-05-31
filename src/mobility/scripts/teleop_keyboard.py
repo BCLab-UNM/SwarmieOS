@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """
 Modified from ros-teleop/teleop_twist_keyboard.
 https://github.com/ros-teleop/teleop_twist_keyboard

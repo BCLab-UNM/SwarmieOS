@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """Escape from the inside of home if the rover ever finds itself there when
 it shouldn't be!
 """

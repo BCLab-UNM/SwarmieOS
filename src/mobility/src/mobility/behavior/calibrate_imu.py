@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """Calibrate the IMU using the 2D method, if necessary."""
 from __future__ import print_function
 

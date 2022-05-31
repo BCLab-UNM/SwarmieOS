@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """Find a corner of the home plate and generate the transform from the home
 coordinate frame to the odometry frame.
 TODO: Using the voting scheme to converge on a single set of corner orientation

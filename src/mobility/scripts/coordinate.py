@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """Coordinate between rovers.
 TODO: Put StartQueuePriority.msg into mobility instead of swarmie_msgs?
 """

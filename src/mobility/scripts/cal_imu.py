@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """
 IMU Node. Gets raw IMU data from ABridge and publishes calibrated IMU messages.
 

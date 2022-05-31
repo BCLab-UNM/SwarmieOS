@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """gohome.py
 Tries to get the rover back to the home nest, while avoiding sonar and cube
 obstacles, and hopefully not dropping the cube in its claw.

@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 """Get the targets buffer from swarmie and publish a PoseArray of the estimated
 block locations (tags translated ~2.5cm toward the center of a block).
 """
