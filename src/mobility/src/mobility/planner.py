@@ -232,7 +232,7 @@ class Planner:
         of the camera's field of view.
 
         Args:
-        * detections - the list of apriltags2to1/AprilTagDetections.
+        * detections - the list of apriltag_ros/AprilTagDetections.
 
         Returns:
         * sorted detections  sorted list of AprilTagDetections in view. Will
