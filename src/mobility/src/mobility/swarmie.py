@@ -22,7 +22,7 @@ from std_msgs.msg import UInt8, String, Float32
 from nav_msgs.msg import Odometry
 from control_msgs.srv import QueryCalibrationState, QueryCalibrationStateRequest
 from geometry_msgs.msg import Point, PointStamped, PoseStamped, Twist, Pose2D
-from apriltags2to1.msg import AprilTagDetection, AprilTagDetectionArray
+from apriltag_ros.msg import AprilTagDetection, AprilTagDetectionArray
 
 import threading 
 
@@ -651,7 +651,7 @@ class Swarmie(object):
         return False
 
     def get_latest_targets(self,id=-1):
-        """ Return the latest `apriltags2to1.msg.AprilTagDetectionArray`. (it might be out of date)
+        """ Return the latest `apriltag_ros.msg.AprilTagDetectionArray`. (it might be out of date)
         and will be affected by twinkeling with an optional id flag"""
         # if self._is_moving():  if not possibly call get_targets_buffer with the last second of detections
         if id == -1:  # all of the tags

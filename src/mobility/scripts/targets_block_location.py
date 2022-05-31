@@ -15,7 +15,7 @@ import rospy
 import tf
 import tf.transformations
 
-from apriltags2to1.msg import AprilTagDetection
+from apriltag_ros.msg import AprilTagDetection
 from geometry_msgs.msg import Pose, PoseArray
 
 from mobility.swarmie import swarmie
