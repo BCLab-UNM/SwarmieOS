@@ -21,7 +21,7 @@ import tf.transformations
 from geometry_msgs.msg import Point, PoseStamped, Quaternion
 from nav_msgs.msg import Odometry
 
-from apriltags2to1.msg import AprilTagDetection
+from apriltag_ros.msg import AprilTagDetection
 
 
 def sort_tags_left_to_right(detections):
