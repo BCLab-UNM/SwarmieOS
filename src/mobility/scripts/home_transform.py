@@ -238,7 +238,7 @@ def closest_inline_pair(poses1,  # type: List[PoseStamped]
         The pair of poses, or None, if no pair of poses are inline.
     """
     # TODO: return a deep copy of the pair of poses?
-    closest = (sys.maxint, PoseStamped(), PoseStamped())
+    closest = (sys.maxsize, PoseStamped(), PoseStamped())
     found_inline = False
 
     for p1 in poses1:
@@ -452,7 +452,7 @@ class HomeTransformGen:
         self._xform_vote = HomeTransformAuthority()
         self._xform_vote.rover_name = self.rover_name
         self._xform_vote.start_time = rospy.Time.now()
-        self._xform_vote.random_priority = random.randrange(0, sys.maxint)
+        self._xform_vote.random_priority = random.randrange(0, sys.maxsize)
         self._xform_vote.boundary_option = (
             HomeTransformAuthority.BOUNDARY_OPT_UNSET
         )
