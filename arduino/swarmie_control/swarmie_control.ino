@@ -30,6 +30,13 @@ int fingerMin = 800; //if you want to shift 0 to a new location raise min; this 
 int fingerMax = 2600; //if you want to limit max travel lower max; this is open
 int wristMin = 1400; //this is up
 int wristMax = 2600; //this is down
+byte wristFeedbackPin = A0; //
+byte fingerFeedbackPin = A1; //
+float maxFingerFeedback = 0; //this is overwritten during cal
+float minFingerFeedback = 0; //this is overwritten during cal
+float maxWristFeedback = 0; //this is overwritten during cal
+float minWristFeedback = 0; //this is overwritten during cal
+
 
 //Movement (VNH5019 Motor Driver Carrier)
 byte rightDirectionA = A3; //"clockwise" input
@@ -72,6 +79,38 @@ NewPing centerUS(centerSignal, centerSignal, 330);
 NewPing rightUS(rightSignal, rightSignal, 330);
 
 
+
+/*
+  This function establishes the feedback values for 2 positions of the servo.
+  With this information, we can interpolate feedback values for intermediate positions
+  https://learn.adafruit.com/analog-feedback-servos/using-feedback
+*/
+void calibrateFingers(){
+  // Move to the maximum position and record the feedback value
+  fingers.write(fingerMax*(2/3)); // Don't do the full range as that has issues
+  delay(2000); // make sure it has time to get there and settle
+  maxFingerFeedback = analogRead(fingerFeedbackPin);
+  
+  // Move to the minimum position and record the feedback value
+  fingers.write(fingerMin);
+  delay(2000); // make sure it has time to get there and settle
+  minFingerFeedback = analogRead(fingerFeedbackPin);
+}//end calibrateFingers
+void calibrateWrist(){
+  // Move to the maximum position and record the feedback value
+  wrist.write(wristMax);
+  delay(2000); // make sure it has time to get there and settle
+  maxWristFeedback = analogRead(wristFeedbackPin);
+  
+  // Move to the minimum position and record the feedback value
+  wrist.write(wristMin);
+  delay(2000); // make sure it has time to get there and settle
+  minWristFeedback = analogRead(wristFeedbackPin);
+}//end calibrateFingers
+
+
+
+
 /////////////
 ////Setup////
 /////////////
@@ -91,7 +130,8 @@ void setup()
   fingers.writeMicroseconds(fingerMin);
   wrist.attach(wristPin,wristMin,wristMax);
   wrist.writeMicroseconds(wristMin);
-
+  calibrateFingers();
+  calibrateWrist();
   rxBuffer = "";
 }
 
@@ -152,7 +192,8 @@ void parse() {
     Serial.print("GRF,");
     Serial.print(String(fingers.attached()) + ",");
     if (fingers.attached()) { // if fails, maybe print nothing?
-      Serial.println(String(DEG2RAD(fingers.read())));
+      Serial.print(String(DEG2RAD(fingers.read()))+",");
+      Serial.println(String((analogRead(fingerFeedbackPin)-minFingerFeedback)/maxFingerFeedback)); // -minFingerFeedback?
     }
     else {
       Serial.println();
@@ -161,7 +202,8 @@ void parse() {
     Serial.print("GRW,");
     Serial.print(String(wrist.attached()) + ",");
     if (wrist.attached()) {
-      Serial.println(String(DEG2RAD(wrist.read())));
+      Serial.print(String(DEG2RAD(wrist.read()))+",");
+      Serial.println(String((analogRead(wristFeedbackPin)-minWristFeedback)/maxWristFeedback));
     }
     else {
       Serial.println();
