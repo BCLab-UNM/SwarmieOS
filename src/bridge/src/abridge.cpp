@@ -83,6 +83,8 @@ PID left_pid(0, 0, 0, 0, 120, -120, 0, -1);
 PID right_pid(0, 0, 0, 0, 120, -120, 0, -1);
 
 //Publishers
+ros::Publisher fingerFeedbackPublish;
+ros::Publisher wristFeedbackPublish;
 ros::Publisher fingerAnglePublish;
 ros::Publisher wristAnglePublish;
 ros::Publisher imuRawPublish;
@@ -130,6 +132,10 @@ int main(int argc, char **argv) {
     
     fingerAnglePublish = aNH.advertise<geometry_msgs::QuaternionStamped>("fingerAngle/prev_cmd", 10);
     wristAnglePublish = aNH.advertise<geometry_msgs::QuaternionStamped>("wristAngle/prev_cmd", 10);
+    
+    fingerFeedbackPublish = aNH.advertise<std_msgs::Float32>("fingerAngle/feedback", 10);
+    wristFeedbackPublish = aNH.advertise<std_msgs::Float32>("wristAngle/feedback", 10);
+        
     imuRawPublish = aNH.advertise<swarmie_msgs::SwarmieIMU>("imu/raw", 10);
     odomPublish = aNH.advertise<nav_msgs::Odometry>("odom", 10);
     sonarLeftPublish = aNH.advertise<sensor_msgs::Range>("sonarLeft", 10);
@@ -353,10 +359,17 @@ void parseData(string str) {
 			if (dataSet.at(0) == "GRF") {
 				fingerAngle.header.stamp = ros::Time::now();
 				fingerAngle.quaternion = tf::createQuaternionMsgFromRollPitchYaw(atof(dataSet.at(2).c_str()), 0.0, 0.0);
-            }
+				//fingerFeedbackPublish wristFeedbackPublish
+				std_msgs::Float32 msg;
+				msg.data = atof(dataSet.at(3).c_str());
+				fingerFeedbackPublish.publish(msg);
+		}
 			else if (dataSet.at(0) == "GRW") {
 				wristAngle.header.stamp = ros::Time::now();
 				wristAngle.quaternion = tf::createQuaternionMsgFromRollPitchYaw(atof(dataSet.at(2).c_str()), 0.0, 0.0);
+				std_msgs::Float32 msg;
+				msg.data = atof(dataSet.at(3).c_str());
+				wristFeedbackPublish.publish(msg);
 			}
 			else if (dataSet.at(0) == "IMU") {
 				imuRaw.header.stamp = ros::Time::now();
