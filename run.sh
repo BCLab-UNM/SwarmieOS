@@ -1,8 +1,8 @@
 #!/bin/bash
 
 export ROS_HOSTNAME=$HOSTNAME.local
-if [ -f "$(dirname $0)/devel/setup.bash" ]; then
-    source "$(dirname $0)/devel/setup.bash"
+if [ -f "$(dirname $0)/devel_isolated/setup.bash" ]; then
+    source "$(dirname $0)/devel_isolated/setup.bash"
 else
     echo "ERROR: You must compile your code before you run this script."
     echo "ERROR: Run the following command:" 
@@ -14,7 +14,8 @@ fi
 
 function get_rover()
 {
-    rovercount=$(rostopic list | grep driveControl | wc -l)
+    #driveControl
+    rovercount=$(rostopic list | grep targets | wc -l)
     if [ "$rovercount" -gt 1 ]; then
 	echo "WARN: Multiple rovers. Using HOSTNAME if this is a rover"
 	echo "ERROR: Use rosrun instead."
@@ -29,7 +30,8 @@ function get_rover()
 	echo ""
 	exit -2
     fi
-    rover=$(rostopic list | grep driveControl | cut -d/ -f 2)
+    #driveControl
+    rover=$(rostopic list | grep targets | cut -d/ -f 2)
 }
 
 exe=$(basename $0)
