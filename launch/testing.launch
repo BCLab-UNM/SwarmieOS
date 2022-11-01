@@ -19,11 +19,11 @@
         <param name="tag_blur" value="0.0" />
         <param name="tag_refine_edges" value="1" />
         <param name="tag_debug" value="0" />
-        <param name="publish_tf" value="false" />
+        <param name="publish_tf" value="true" />
         <param name="remove_duplicates" value="false" />
         <remap from="image_rect" to="camera/image_raw" />
         <remap from="tag_detections_image" to="targets/image" />
-        <remap from="tag_detections" to="targets/in" />
+        <remap from="tag_detections" to="targets" />
         <rosparam param="standalone_tags">
           [
             {id: 0, size: 0.04},
@@ -125,5 +125,16 @@
 
     <remap from="odometry/filtered" to="odom/filtered" />
     
+  </node>
+  
+  
+  <node pkg="ublox_gps" type="ublox_gps" name="ublox_gps_test"
+        respawn="true"
+        respawn_delay="1"
+        clear_params="true">
+        <rosparam>
+        frame_id: "r9/base_link"
+        fix_mode: "2d"
+        </rosparam>
   </node>
 </launch>
