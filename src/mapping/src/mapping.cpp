@@ -907,9 +907,10 @@ void targetHandler(const apriltag_ros::AprilTagDetectionArray::ConstPtr& message
 
             for (int i=0; i<message->detections.size(); i++) {
                 geometry_msgs::PoseStamped tagpose;
-                //@TODO fix this ******************************************************************************************
-                                    message->detections[i].pose,
-                                    tagpose);
+                geometry_msgs::PoseStamped detection;
+                detection.pose.position = message->detections[i].pose.pose.pose.position;
+                detection.pose.orientation = message->detections[i].pose.pose.pose.orientation;
+                tf_l->transformPose(map_frame, detection, tagpose);
 
                 grid_map::Position pos(tagpose.pose.position.x,
                                        tagpose.pose.position.y);
