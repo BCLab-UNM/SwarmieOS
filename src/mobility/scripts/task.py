@@ -5,7 +5,6 @@ from __future__ import print_function
 import sys
 import math
 import rospy 
-import StringIO 
 import traceback 
 
 from std_msgs.msg import UInt8, String
@@ -13,7 +12,7 @@ from std_msgs.msg import UInt8, String
 import threading 
 task_lock = threading.Lock()
 
-from mobility import sync
+from mobility import Sync
 
 # Behavior programs
 import mobility.behavior.init
@@ -112,7 +111,7 @@ class Task :
             return "escape_home"
         return "unknown"
         
-    @sync(task_lock)
+    @Sync(task_lock)
     def run_next(self):
         self.publish_status(None)
         self.task_pub.publish(self.get_task())
