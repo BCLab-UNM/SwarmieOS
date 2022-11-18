@@ -78,7 +78,7 @@ if __name__ == '__main__' :
         print("Missing IPython run 'sudo pip install ipython'\n Failing over")
         try: 
             while True : 
-                line = raw_input('>>> ')
+                line = input('>>> ')
                 if line is not None and line != '' :
                     try :
                         exec (line)
