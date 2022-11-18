@@ -29,7 +29,7 @@ import threading
 swarmie_lock = threading.Lock()
 
 from .utils import block_detection, block_pose, filter_detections, is_moving
-from mobility import sync
+from mobility import Sync
 
 class DriveException(Exception):
     def __init__(self, st):
@@ -278,16 +278,16 @@ class Swarmie(object):
         self._drive_speeds['fast'] = (config['DRIVE_SPEED_FAST'],
                                       config['TURN_SPEED_FAST'])
 
-    @sync(swarmie_lock)
+    @Sync(swarmie_lock)
     def _odom(self, msg) : 
         self.OdomLocation.Odometry = msg
             
-    @sync(swarmie_lock)
+    @Sync(swarmie_lock)
     def _obstacle(self, msg) :
         self.Obstacles &= ~msg.mask 
         self.Obstacles |= msg.msg
 
-    @sync(swarmie_lock)
+    @Sync(swarmie_lock)
     def _home_point(self, msg, approx=False):
         """Update the home plate's position in the odometry frame.
 
@@ -300,7 +300,7 @@ class Swarmie(object):
         else:
             self._home_odom_position = msg
 
-    @sync(swarmie_lock)
+    @Sync(swarmie_lock)
     def _targets(self, msg):
         self.targets_index = (self.targets_index + 1) % self.CIRCULAR_BUFFER_SIZE
         self.targets[self.targets_index] = msg.detections
@@ -626,10 +626,10 @@ class Swarmie(object):
             self.set_wrist_angle(angle)
             rospy.sleep(1)
             blocks = self.get_targets_buffer(age=1, id=0)
-            blocks = sorted(blocks, key=lambda x: abs(x.pose.pose.position.z))
+            blocks = sorted(blocks, key=lambda x: abs(x.pose.pose.pose.position.z))
             if len(blocks) > 0 :
                 nearest = blocks[0]
-                z_dist = nearest.pose.pose.position.z
+                z_dist = nearest.pose.pose.pose.position.z
                 if abs(z_dist) < max_z_dist:
                     return True
         
@@ -659,7 +659,7 @@ class Swarmie(object):
         else:  # only the specified tags with id
             return [tag for tag in self.targets[self.targets_index] if tag.id == id]
 
-    def get_targets_buffer(self, age=8, cleanup=True, id=-1):
+    def get_targets_buffer(self, age=8.0, cleanup=True, id=-1):
         ''' Return a list of AprilTagDetections received in the last 'age' seconds,
         filtered by id, with duplicates removed, if specified.
 
@@ -943,7 +943,7 @@ class Swarmie(object):
         angle = angles.shortest_angular_distance(loc.theta, heading)
         self.turn(angle, **kwargs)
     
-    @sync(swarmie_lock)
+    @Sync(swarmie_lock)
     def is_moving(self):
         ''' calls _is_moving that uses OdomLocation angular.z & linear.x  
         Returns: 
@@ -1058,9 +1058,9 @@ class Swarmie(object):
         # Sort blocks by their distance from the base_link frame
         detections_xformed = sorted(
             detections_xformed,
-            key=lambda x: math.sqrt(x[1].pose.pose.position.x**2
-                                    + x[1].pose.pose.position.y**2
-                                    + x[1].pose.pose.position.z**2)
+            key=lambda x: math.sqrt(x[1].pose.pose.pose.position.x**2
+                                    + x[1].pose.pose.pose.position.y**2
+                                    + x[1].pose.pose.pose.position.z**2)
         )
 
         nearest = detections_xformed[0][0]
@@ -1069,7 +1069,7 @@ class Swarmie(object):
         if nearest.id == 256:
             return None
 
-        return nearest.pose.pose.position
+        return nearest.pose.pose.pose.position
 
     def add_resource_pile_location(self, detection_time_tolerance=0.4, override=False, ignore_claw=False):
         '''Remember the search exit locations.
@@ -1087,7 +1087,7 @@ class Swarmie(object):
             if self.simulator_running():
                 min_z_dist = .11
             detections = [d for d in detections
-                          if d.pose.pose.position.z > min_z_dist]
+                          if d.pose.pose.pose.position.z > min_z_dist]
 
         cubes = [block_detection(d, self.block_size) for d in detections]
         cubes = filter_detections(cubes, dist=swarmie.block_size - 0.01)
@@ -1101,7 +1101,7 @@ class Swarmie(object):
         if num_cubes == 0: 
             location = self.get_odom_location().get_pose()
         else:
-            location = swarmie.transform_pose('odom', cubes[0].pose, timeout=3
+            location = swarmie.transform_pose('odom', cubes[0].pose.pose, timeout=3
                                               ).pose.position
         pile_locations_list = rospy.get_param('resource_pile_locations', [])
 
