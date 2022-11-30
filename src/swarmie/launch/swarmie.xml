@@ -116,8 +116,8 @@
   
   <group unless="$(arg simulation)">
 
-    <node name="master_discovery" pkg="master_discovery_fkie" type="zeroconf" respawn="true" output="screen"/>
-    <node name="master_sync" pkg="master_sync_fkie" type="master_sync" respawn="true" output="screen">
+    <node name="master_discovery" pkg="fkie_master_discovery" type="master_discovery" respawn="true" output="screen"/>
+    <node name="master_sync" pkg="fkie_master_sync" type="master_sync" respawn="true" output="screen">
       <rosparam param="ignore_topics">
         - /tf
         - /tf_static
