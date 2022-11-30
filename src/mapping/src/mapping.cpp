@@ -910,6 +910,7 @@ void targetHandler(const apriltag_ros::AprilTagDetectionArray::ConstPtr& message
                 geometry_msgs::PoseStamped detection;
                 detection.pose.position = message->detections[i].pose.pose.pose.position;
                 detection.pose.orientation = message->detections[i].pose.pose.pose.orientation;
+                detection.header.frame_id = message->detections[i].pose.header.frame_id;
                 tf_l->transformPose(map_frame, detection, tagpose);
 
                 grid_map::Position pos(tagpose.pose.position.x,
