@@ -21,7 +21,7 @@ from std_srvs.srv import Empty
 from std_msgs.msg import UInt8, String, Float32
 from nav_msgs.msg import Odometry
 from control_msgs.srv import QueryCalibrationState, QueryCalibrationStateRequest
-from geometry_msgs.msg import Point, PointStamped, PoseStamped, Twist, Pose2D
+from geometry_msgs.msg import Point, PointStamped, PoseStamped, Twist, Pose2D, PoseWithCovarianceStamped, PoseWithCovariance
 from apriltag_ros.msg import AprilTagDetection, AprilTagDetectionArray
 
 import threading 
@@ -626,10 +626,10 @@ class Swarmie(object):
             self.set_wrist_angle(angle)
             rospy.sleep(1)
             blocks = self.get_targets_buffer(age=1, id=0)
-            blocks = sorted(blocks, key=lambda x: abs(x.pose.pose.pose.position.z))
+            blocks = sorted(blocks, key=lambda x: abs(x.pose.pose.position.z))
             if len(blocks) > 0 :
                 nearest = blocks[0]
-                z_dist = nearest.pose.pose.pose.position.z
+                z_dist = nearest.pose.pose.position.z
                 if abs(z_dist) < max_z_dist:
                     return True
         
@@ -987,7 +987,18 @@ class Swarmie(object):
             rospy.Duration(timeout)
         )
 
-        return swarmie.xform.transformPose(target_frame, pose)
+        if type(pose) is PoseWithCovarianceStamped:
+            ps = PoseStamped(pose=pose.pose.pose, header=pose.header)
+        elif type(pose) is PoseStamped:
+            ps = pose
+        else:
+            rospy.logerr_throttle(
+                1.0,
+                'transform_pose: got pose type:' + str(type(pose))
+            )
+            ps = PoseStamped()
+
+        return swarmie.xform.transformPose(target_frame, ps)
 
     def get_nearest_block_location(self, targets_buffer_age=0):
         '''Find the block closest to the rover's claw.
@@ -1026,7 +1037,7 @@ class Swarmie(object):
                 if det.id == 0:
                     ps_det = block_pose(det, self.block_size)
                 else:
-                    ps_det = det.pose
+                    ps_det = det
 
                 # One simple method of getting a tag's current position relative
                 # to the base_link frame is using a 2-step transform: first into
@@ -1034,7 +1045,7 @@ class Swarmie(object):
                 # need to re-stamp the pose after performing the first transform
                 # in order to get the tag's current pose in the base_link frame,
                 # instead of its pose in the base_link frame when it was seen.
-                ps_odom = swarmie.transform_pose('odom', ps_det,
+                ps_odom = swarmie.transform_pose('odom', ps_det.pose,
                                                  timeout=timeout)
                 ps_odom.header.stamp = now
                 ps_base_link = swarmie.transform_pose('base_link', ps_odom,
@@ -1058,9 +1069,9 @@ class Swarmie(object):
         # Sort blocks by their distance from the base_link frame
         detections_xformed = sorted(
             detections_xformed,
-            key=lambda x: math.sqrt(x[1].pose.pose.pose.position.x**2
-                                    + x[1].pose.pose.pose.position.y**2
-                                    + x[1].pose.pose.pose.position.z**2)
+            key=lambda x: math.sqrt(x[1].pose.pose.position.x**2
+                                    + x[1].pose.pose.position.y**2
+                                    + x[1].pose.pose.position.z**2)
         )
 
         nearest = detections_xformed[0][0]
@@ -1069,7 +1080,7 @@ class Swarmie(object):
         if nearest.id == 256:
             return None
 
-        return nearest.pose.pose.pose.position
+        return nearest.pose.pose.position
 
     def add_resource_pile_location(self, detection_time_tolerance=0.4, override=False, ignore_claw=False):
         '''Remember the search exit locations.
@@ -1101,7 +1112,7 @@ class Swarmie(object):
         if num_cubes == 0: 
             location = self.get_odom_location().get_pose()
         else:
-            location = swarmie.transform_pose('odom', cubes[0].pose.pose, timeout=3
+            location = swarmie.transform_pose('odom', cubes[0].pose, timeout=3
                                               ).pose.position
         pile_locations_list = rospy.get_param('resource_pile_locations', [])
 
