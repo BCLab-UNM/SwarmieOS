@@ -18,7 +18,7 @@ import math
 import rospy
 import tf.transformations
 
-from geometry_msgs.msg import Point, PoseStamped, Quaternion
+from geometry_msgs.msg import Point, PoseStamped, Quaternion, PoseWithCovariance, PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry
 
 from apriltag_ros.msg import AprilTagDetection
@@ -130,6 +130,10 @@ def insert_to_filtered_set(det,  # type: AprilTagDetection
     Returns:
         The updated set of filtered detections.
     """
+    if type(det.pose) is PoseWithCovarianceStamped:
+        det.pose = PoseStamped(pose=det.pose.pose.pose, header=det.pose.header)
+    if type(det.pose) is PoseWithCovariance:
+        det.pose.pose = det.pose.pose.pose
     for d in det_set:
         if (math.sqrt((det.pose.pose.position.x - d.pose.pose.position.x)**2
                       + (det.pose.pose.position.y - d.pose.pose.position.y)**2
@@ -171,9 +175,9 @@ def filter_detections(detections,  # type: List[AprilTagDetection]
     now = rospy.Time.now()
 
     if id == -1:
-        id = [0, 1, 256]  # resource & home
+        id = [(0,), (1,), (256,)]  # resource & home
     else:
-        id = [id]
+        id = [(id,)]
 
     filtered = []  # type: List[AprilTagDetection]
 
