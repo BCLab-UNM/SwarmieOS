@@ -22,7 +22,7 @@ class TopicWatcher:
     WARNING_STATUS  = 2 
     FAILED_STATUS   = 3
     
-    def __init__(self, topicname, init_time=60, warn_time=5, fail_time=10):
+    def __init__(self, topicname, init_time=70, warn_time=15, fail_time=20):
         """
         Watch the specified topic. 
         
