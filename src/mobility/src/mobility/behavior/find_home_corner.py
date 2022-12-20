@@ -145,11 +145,11 @@ def find_rightmost_home_tag(transform_timeout=0.15):
 
     if len(targets_sorted) > 0:
         # Filter targets_sorted to contain a group of the rightmost tags
-        targets_sorted = filter(
+        targets_sorted = list(filter(
             lambda tup: abs(tup[1].pose.position.y
                             - targets_sorted[0][1].pose.position.y) < 0.07,
             targets_sorted
-        )
+        ))
         # Of the rightmost tags, return one that's far away.
         return max(targets_sorted, key=lambda tup: tup[1].pose.position.x)[0]
 
