@@ -1077,7 +1077,7 @@ class Swarmie(object):
         nearest = detections_xformed[0][0]
 
         # Check for a home tag between the rover and the block.
-        if nearest.id == 256:
+        if nearest.id == [256]:
             return None
 
         return nearest.pose.pose.position
