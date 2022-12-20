@@ -34,7 +34,7 @@ def get_angle_and_dist_to_escape_home(detections):
     see_home_tag = False
 
     for detection in detections:
-        if detection.id == 256:
+        if detection.id == [256]:
             see_home_tag = True
             home_detection = swarmie.transform_pose('/base_link',
                                                     detection.pose)
