@@ -28,13 +28,13 @@ def get_angle_and_dist_to_escape_home(detections):
     """
     OVERSHOOT_DIST = 0.4  # meters, distance to overshoot target by
     result = {
-        'angle': sys.maxint,
+        'angle': sys.maxsize,
         'dist': None
     }
     see_home_tag = False
 
     for detection in detections:
-        if detection.id == [256]:
+        if detection.id[0] == 256:
             see_home_tag = True
             home_detection = swarmie.transform_pose('/base_link',
                                                     detection.pose)
