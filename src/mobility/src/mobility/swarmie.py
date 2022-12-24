@@ -657,7 +657,7 @@ class Swarmie(object):
         if id == -1:  # all of the tags
             return self.targets[self.targets_index]
         else:  # only the specified tags with id
-            return [tag for tag in self.targets[self.targets_index] if tag.id == id]
+            return [tag for tag in self.targets[self.targets_index] if tag.id[0] == id]
 
     def get_targets_buffer(self, age=8.0, cleanup=True, id=-1):
         ''' Return a list of AprilTagDetections received in the last 'age' seconds,
@@ -1097,8 +1097,9 @@ class Swarmie(object):
             min_z_dist = 0.18
             if self.simulator_running():
                 min_z_dist = .11
+                #might need to double check this d object might change
             detections = [d for d in detections
-                          if d.pose.pose.pose.position.z > min_z_dist]
+                          if d.pose.pose.position.z > min_z_dist]
 
         cubes = [block_detection(d, self.block_size) for d in detections]
         cubes = filter_detections(cubes, dist=swarmie.block_size - 0.01)
