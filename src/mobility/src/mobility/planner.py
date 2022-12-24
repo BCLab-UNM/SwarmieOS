@@ -239,7 +239,7 @@ class Planner:
           be empty if no tags are in view.
         """
         return sorted(detections,
-                      key=lambda x: abs(x.pose.pose.position.x))
+                      key=lambda x: abs(x.pose.pose.pose.position.x))
 
     def _get_speeds(self, linear=None, angular=None):
         """Return the speed dictionary to use."""
