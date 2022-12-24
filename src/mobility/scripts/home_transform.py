@@ -30,6 +30,7 @@ import sys
 import tf
 import tf.transformations
 import traceback
+from functools import reduce
 
 from geometry_msgs.msg import (PointStamped, Pose, Pose2D, PoseStamped,
                                PoseArray, Quaternion, TransformStamped)
@@ -37,7 +38,7 @@ from nav_msgs.msg import Odometry
 from std_msgs.msg import Time
 
 from mobility.utils import is_moving
-from mobility import sync
+from mobility import Sync
 
 from apriltag_ros.msg import AprilTagDetection, AprilTagDetectionArray
 from mobility.msg import HomeTransformAuthority
@@ -271,7 +272,7 @@ class BoundsStillUnsetError(Exception):
     """Raised when HomeTransformGen failed to set its corner orientation
     bounds.
     """
-    pass
+    rospy.logwarn("BoundsStillUnsetError")
 
 
 class HomeTransformGen:
@@ -537,7 +538,7 @@ class HomeTransformGen:
         self._xform_vote_timer = rospy.Timer(rospy.Duration(self._vote_rate),
                                              self._send_xform_vote)
 
-    @sync(home_xform_lock)
+    @Sync(home_xform_lock)
     def _odom_cb(self, msg):
         # type: (Odometry) -> None
         """Store the most recent Odometry message."""
@@ -603,7 +604,7 @@ class HomeTransformGen:
 
         self._set_bounds(vote.boundary_option, vote.boundary_theta)
 
-    @sync(home_xform_lock)
+    @Sync(home_xform_lock)
     def _home_xform_vote_cb(self, msg):
         # type: (HomeTransformAuthority) -> None
         """Process a vote received from another rover."""
@@ -636,7 +637,7 @@ class HomeTransformGen:
         # Accept the vote and set this rover's bounds
         self._accept_vote(msg, reason="Vote authority is higher than mine")
 
-    @sync(home_xform_lock)
+    @Sync(home_xform_lock)
     def _send_xform_vote(self, _event):
         """Publish this rover's transform authority if it's the current leader,
         or if it hasn't heard from the leader recently.
@@ -848,7 +849,7 @@ class HomeTransformGen:
 
         return home_pose
 
-    @sync(home_xform_lock)
+    @Sync(home_xform_lock)
     def _home_pose(self, corner_type, corner_pose):
         # type: (int, PoseStamped) -> Tuple[PointStamped, Optional[PoseStamped]]
         """Given a corner pose in the base_link frame, calculate the home
@@ -916,7 +917,7 @@ class HomeTransformGen:
 
         return home_point, home_pose
 
-    @sync(home_xform_lock)
+    @Sync(home_xform_lock)
     def _gen_home_xform(self, home_pose):
         # type: (PoseStamped) -> None
         """Given the home_plate's pose in the odometry frame, calculate the
@@ -984,7 +985,7 @@ class HomeTransformGen:
 
         return abs(tag_yaw) < yaw_threshold
 
-    @sync(home_xform_lock)
+    @Sync(home_xform_lock)
     def _is_rover_inside_home(self, good_yaw_count, bad_yaw_count):
         # type: (float, float) -> bool
         """Return True if the rover appears to be inside of home.
@@ -1047,7 +1048,7 @@ class HomeTransformGen:
         """Find the approximate home location, given two lists of home tag
         poses, bucketed by their orientation.
 
-        Buckets should contain only home tags (id == 256), and at least one
+        Buckets should contain only home tags (id == [256]), and at least one
         bucket should not be empty.
         """
         if self._cur_odom is not None and is_moving(self._cur_odom):
@@ -1135,10 +1136,11 @@ class HomeTransformGen:
 
         detections = []  # type: List[PoseStamped]
         for detection in msg.detections:  # type: AprilTagDetection
-            if detection.id == 256:
+            if detection.id[0] == 256: #id == (256,)
                 try:
-                    xpose = self._xform_l.transformPose(self._base_link_frame,
-                                                        detection.pose)
+                    #AttributeError: 'PoseWithCovariance' object has no attribute 'header'
+                    ps = PoseStamped(pose=detection.pose.pose.pose, header=detection.pose.header)
+                    xpose = self._xform_l.transformPose(self._base_link_frame, ps)
                     r, p, y = euler_from_quaternion(xpose.pose.orientation)
 
                     if abs(r) < 0.25 and abs(p) < 0.25:  # ~15 degrees
@@ -1161,10 +1163,16 @@ class HomeTransformGen:
                         detections.append(xpose)
 
                 except tf.Exception:
-                    pass
+                    rospy.logwarn(
+                        ('{}: Transform exception raised by ' +
+                         '_targets_cb():\n{}').format(
+                            self.rover_name, e
+                        )
+                    )
 
         # If a home tag is in view
         if len(detections) > 0:
+            rospy.loginfo("I see tags in home_tf")
             if self._is_rover_inside_home(good_yaw_count, bad_yaw_count):
                 next_obst_status |= Obstacle.INSIDE_HOME
 
