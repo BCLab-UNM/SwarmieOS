@@ -17,7 +17,7 @@ import threading
 from nav_msgs.msg import Odometry
 from control_msgs.srv import QueryCalibrationState
 
-from mobility import sync
+from mobility import Sync
 from mobility.swarmie import Location
 
 from swarmie_msgs.msg import StartQueuePriority
@@ -135,7 +135,7 @@ class Coordinator(rospy.SubscribeListener):
                     Coordinator.CAL_PRIORITY_PENALTY
                 )
 
-    @sync(coord_lock)
+    @Sync(coord_lock)
     def _insert_to_start_queue(self, msg):
         # type: (StartQueuePriority) -> None
         """Insert a rover into the appropriate start queue, if it says it hasn't
@@ -171,7 +171,7 @@ class Coordinator(rospy.SubscribeListener):
 
         rospy.loginfo('Current start order: ' + str(log_msg))
 
-    @sync(coord_lock)
+    @Sync(coord_lock)
     def peer_subscribe(self, topic_name, topic_publish, peer_publish):
         # type: (str, Callable[[Msg], None], Callable[[Msg], None]) -> None
         """Callback when a peer has subscribed to a topic. Send a single message
@@ -189,7 +189,7 @@ class Coordinator(rospy.SubscribeListener):
         """
         peer_publish(self._queue_priority)
 
-    @sync(coord_lock)
+    @Sync(coord_lock)
     def peer_unsubscribe(self, topic_name, num_peers):
         # type: (str, int) -> None
         """Callback when a peer has unsubscribed from a topic.
@@ -245,7 +245,7 @@ class Coordinator(rospy.SubscribeListener):
 
         return QueueResponse(result=QueueResponse.TIMEOUT)
 
-    @sync(coord_lock)
+    @Sync(coord_lock)
     def _remove_from_queue(self, req):
         # type: (QueueRemoveRequest) -> QueueRemoveResponse
         """Remove a rover from the start queue. This provides a service to both
@@ -279,7 +279,7 @@ class Coordinator(rospy.SubscribeListener):
 
         return QueueRemoveResponse()
 
-    @sync(coord_lock)
+    @Sync(coord_lock)
     def _list_rovers(self, req):
         # type: (GetRoverNamesRequest) -> GetRoverNamesResponse
         """Return a list of the rovers currently online.
