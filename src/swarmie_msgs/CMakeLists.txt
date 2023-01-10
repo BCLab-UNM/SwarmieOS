@@ -21,4 +21,4 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/StartQueuePriority.msg"
   DEPENDENCIES std_msgs geometry_msgs
 )
-
+ament_package()
