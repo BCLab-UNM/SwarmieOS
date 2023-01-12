@@ -4,5 +4,5 @@ std_msgs/Header header
 float64 linear_setpoint # rover (encoder ticks/sec)
 float64 angular_setpoint # rover (encoder ticks/sec)
 
-bridge/PidWheel left_wheel
-bridge/PidWheel right_wheel
+swarmie_msgs/PidWheel left_wheel
+swarmie_msgs/PidWheel right_wheel

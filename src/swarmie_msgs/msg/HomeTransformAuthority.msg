@@ -5,7 +5,7 @@ int8 BOUNDARY_OPT_2 = 2
 string rover_name
 
 # A rover's start time is the primary method for determining authority.
-time start_time
+builtin_interfaces/Time start_time
 
 # A randomly generated priority number is the secondary method for determining
 # authority, if 2 or more rovers have the same start time.
