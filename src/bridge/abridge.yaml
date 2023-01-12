@@ -1,0 +1,11 @@
+abridge:
+  ros__parameters:
+    scale: 1000 #Scale factor for PID coefficients
+    Kp: 1 #Kp for wheel velocity
+    Ki: 1 #Ki for wheel velocity
+    Kd: 1 #Kd for wheel velocity
+    db: 128 #Deadband for wheel velocity
+    st: 128 #Stiction for wheel velocity
+    wu: 2**32 #Windup limit wheel velocity
+    ff_l: 65535 #Left Wheel Feed forward slope
+    ff_r: 65535 #Right Wheel Feed forward slope
