@@ -12,6 +12,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(builtin_interfaces REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
@@ -19,6 +20,11 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Obstacle.msg"
   "msg/SwarmieIMU.msg"
   "msg/StartQueuePriority.msg"
-  DEPENDENCIES std_msgs geometry_msgs
+  "msg/PidState.msg"
+  "msg/PidWheel.msg"
+  "msg/HomeTransformAuthority.msg"
+  "msg/MoveRequest.msg"
+  "msg/MoveResult.msg"
+  DEPENDENCIES std_msgs geometry_msgs builtin_interfaces
 )
 ament_package()
