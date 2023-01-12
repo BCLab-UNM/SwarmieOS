@@ -1,191 +1,191 @@
-#include <math.h>
-#include <ros/ros.h>
+#define BOOST_BIND_NO_PLACEHOLDERS
+
+#include <cmath>
+#include "rclcpp/rclcpp.hpp"
 
 #include <boost/thread.hpp>
 
 //ROS libraries
-#include <tf/transform_datatypes.h>
-#include <dynamic_reconfigure/server.h>
-#include <dynamic_reconfigure/client.h>
+#include <tf2/transform_datatypes.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+//#include <dynamic_reconfigure/server.h>
+//#include <dynamic_reconfigure/client.h>
 
 //ROS messages
-#include <std_msgs/Float32.h>
-#include <std_msgs/String.h>
-#include <geometry_msgs/Quaternion.h>
-#include <geometry_msgs/QuaternionStamped.h>
-#include <geometry_msgs/Twist.h>
-#include <nav_msgs/Odometry.h>
-#include <sensor_msgs/Range.h>
-#include <std_msgs/UInt8.h>
-#include <std_srvs/Empty.h>
+#include <std_msgs/msg/float32.hpp>
+#include <std_msgs/msg/string.hpp>
+#include <geometry_msgs/msg/quaternion.hpp>
+#include <geometry_msgs/msg/quaternion_stamped.hpp>
+#include <geometry_msgs/msg/twist.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <sensor_msgs/msg/range.hpp>
+#include <std_msgs/msg/u_int8.hpp>
+//#include <std_srvs/srv/empty.hpp>
 
 // Project messages
-#include <bridge/PidState.h>
-#include <swarmie_msgs/SwarmieIMU.h>
+#include "swarmie_msgs/msg/pid_state.hpp"
+//#include "swarmie_msgs/msg/pid_config.hpp"
+#include "swarmie_msgs/msg/swarmie_imu.hpp"
 
 //Package include
 #include <usbSerial.h>
 
 #include "pid.h"
-#include <bridge/pidConfig.h>
+using std::placeholders::_1;
 
 using namespace std;
 
-//aBridge functions
-void driveCommandHandler(const geometry_msgs::Twist::ConstPtr& message);
-void fingerAngleHandler(const std_msgs::Float32::ConstPtr& angle);
-void wristAngleHandler(const std_msgs::Float32::ConstPtr& angle);
-void serialActivityTimer(const ros::TimerEvent& e);
-void publishRosTopics();
-void parseData(string data);
-void initialconfig();
 
-//Globals
-geometry_msgs::QuaternionStamped fingerAngle;
-geometry_msgs::QuaternionStamped wristAngle;
-swarmie_msgs::SwarmieIMU imuRaw;
-nav_msgs::Odometry odom;
-double odomTheta = 0;
-sensor_msgs::Range sonarLeft;
-sensor_msgs::Range sonarCenter;
-sensor_msgs::Range sonarRight;
-USBSerial usb;
-const int baud = 115200;
-char dataCmd[] = "d\n";
-char moveCmd[16];
-char host[128];
-const float deltaTime = 0.1; //abridge's update interval
-int currentMode = 0;
-geometry_msgs::Twist speedCommand;
+class abridge : public rclcpp::Node {
+public:
+    abridge(): Node("abridge"){
+        string devicePath = "/dev/ttyUSB0";
+        //rclcpp::param::param("~device", devicePath, string("/dev/ttyUSB0"));
+        usb.openUSBPort(devicePath, baud);
 
-// Allowing messages to be sent to the arduino too fast causes a disconnect
-// This is the minimum time between messages to the arduino in microseconds.
-// Only used with the gripper commands to fix a manual control bug.
-unsigned int min_usb_send_delay = 100;
 
-float heartbeat_publish_interval = 2;
+        fingerAnglePublish = this->create_publisher<geometry_msgs::msg::QuaternionStamped>("fingerAngle/prev_cmd", 10);
+        wristAnglePublish = this->create_publisher<geometry_msgs::msg::QuaternionStamped>("wristAngle/prev_cmd", 10);
+        imuRawPublish = this->create_publisher<swarmie_msgs::msg::SwarmieIMU>("imu/raw", 10);
+        odomPublish = this->create_publisher<nav_msgs::msg::Odometry>("odom", 10);
+        sonarLeftPublish = this->create_publisher<sensor_msgs::msg::Range>("sonarLeft", 10);
+        sonarCenterPublish = this->create_publisher<sensor_msgs::msg::Range>("sonarCenter", 10);
+        sonarRightPublish = this->create_publisher<sensor_msgs::msg::Range>("sonarRight", 10);
+        infoLogPublisher = this->create_publisher<std_msgs::msg::String>("/infoLog", 1); //@TODO fix qos to be latching if needed
+        debugPIDPublisher = this->create_publisher<swarmie_msgs::msg::PidState>("bridge/debugPID", 1); //@TODO fix qos to be latching if needed
 
-const double wheelBase = 0.278; //distance between left and right wheels (in M)
-const double leftWheelCircumference = 0.3651; // avg for 3 rovers (in M)
-const double rightWheelCircumference = 0.3662; // avg for 3 rovers (in M)
-const int cpr = 8400; //"cycles per revolution" -- number of encoder increments per one wheel revolution
+        heartbeatPublisher = this->create_publisher<std_msgs::msg::String>("bridge/heartbeat`", 1);
+        //this->create_wall_timer(500ms, std::bind(&abridge::timer_callback, this));
 
-// running counts of encoder ticks
-double leftTicks = 0;
-double rightTicks = 0;
-// wheel velocities in ticks/sec
-double leftTickVel = 0;
-double rightTickVel = 0;
-double odomTS = 0;
+        driveControlSubscriber = this->create_subscription<geometry_msgs::msg::Twist>("driveControl", 10, std::bind(&abridge::driveCommandHandler, this, _1));
+        fingerAngleSubscriber = this->create_subscription<std_msgs::msg::Float32>("fingerAngle/cmd", 1, std::bind(&abridge::fingerAngleHandler, this, _1));
+        wristAngleSubscriber = this->create_subscription<std_msgs::msg::Float32>("wristAngle/cmd", 1, std::bind(&abridge::wristAngleHandler, this, _1));
+        modeSubscriber = this->create_subscription<std_msgs::msg::UInt8>("mode", 1, std::bind(&abridge::modeHandler, this, _1));
 
-// Immobilize robot until the first PID configuration.
-PID left_pid(0, 0, 0, 0, 120, -120, 0, -1);
-PID right_pid(0, 0, 0, 0, 120, -120, 0, -1);
+        /*
+        this->create_wall_timer(
+                std::chrono::seconds(deltaTime),
+                std::bind(&MyNode::timerCallback, this));
 
-//Publishers
-ros::Publisher fingerAnglePublish;
-ros::Publisher wristAnglePublish;
-ros::Publisher imuRawPublish;
-ros::Publisher odomPublish;
-ros::Publisher sonarLeftPublish;
-ros::Publisher sonarCenterPublish;
-ros::Publisher sonarRightPublish;
-ros::Publisher infoLogPublisher;
-ros::Publisher heartbeatPublisher;
+        heartbeat_publish_interval
+                publishTimer = aNH.createTimer(rclcpp::Duration(deltaTime), serialActivityTimer);
+        publish_heartbeat_timer = aNH.createTimer(rclcpp::Duration(heartbeat_publish_interval), publishHeartBeatTimerEventHandler);
+        */
 
-ros::Publisher debugPIDPublisher;
-bridge::PidState pid_state;
+        this->declare_parameter("odom_frame", "odom");
+        /*
+        rclcpp::param::param<std_msgs::msg::string>("odom_frame", odom.header.frame_id, "odom");
+        rclcpp::param::param<std_msgs::msg::string>("base_link_frame", odom.child_frame_id, "base_link");
+        rclcpp::param::param<std_msgs::msg::string>("sonar_left_frame", sonarLeft.header.frame_id, "us_left_link");
+        rclcpp::param::param<std_msgs::msg::string>("sonar_center_frame", sonarCenter.header.frame_id, "us_center_link");
+        rclcpp::param::param<std_msgs::msg::string>("sonar_right_frame", sonarRight.header.frame_id, "us_right_link");
+        */
+        imuRaw.header.frame_id = odom.child_frame_id;
+    }
 
-//Subscribers
-ros::Subscriber driveControlSubscriber;
-ros::Subscriber fingerAngleSubscriber;
-ros::Subscriber wristAngleSubscriber;
-ros::Subscriber modeSubscriber;
+private:
+    geometry_msgs::msg::QuaternionStamped fingerAngle;
+    geometry_msgs::msg::QuaternionStamped wristAngle;
+    swarmie_msgs::msg::SwarmieIMU imuRaw;
+    nav_msgs::msg::Odometry odom;
+    double odomTheta = 0;
+    sensor_msgs::msg::Range sonarLeft;
+    sensor_msgs::msg::Range sonarCenter;
+    sensor_msgs::msg::Range sonarRight;
+    USBSerial usb;
+    const int baud = 115200;
+    char dataCmd[3] = "d\n";
+    char moveCmd[16];
+    char host[128];
+    const float deltaTime = 0.1; //abridge's update interval
+    int currentMode = 0;
+    geometry_msgs::msg::Twist speedCommand;
+    void driveCommandHandler(const geometry_msgs::msg::Twist::SharedPtr message);
+    void fingerAngleHandler(const std_msgs::msg::Float32::SharedPtr angle);
+    void wristAngleHandler(const std_msgs::msg::Float32::SharedPtr angle);
+    void serialActivityTimer();
+    void modeHandler(const std_msgs::msg::UInt8::SharedPtr message);
+    void publishRosTopics();
+    void parseData(string str);
+    //void initialconfig();
 
-//Timers
-ros::Timer publishTimer;
-ros::Timer publish_heartbeat_timer;
+    double leftTicksToMeters(double leftTicks) const;
+    double rightTicksToMeters(double rightTicks) const;
+    double metersToTicks(double meters) const;
+    double leftMetersToTicks(double meters) const;
+    double rightMetersToTicks(double meters) const;
+    double diffToTheta(double right, double left) const;
+    double thetaToDiff(double theta) const;
 
-// Feed-forward constants
-double ff_l;
-double ff_r;
+    //Callback handlers
+    void publishHeartBeatTimerEventHandler();
+    //void reconfigure(bridge::pidConfig &cfg, uint32_t level);
 
-//Callback handlers
-void publishHeartBeatTimerEventHandler(const ros::TimerEvent& event);
-void reconfigure(bridge::pidConfig &cfg, uint32_t level);
-void modeHandler(const std_msgs::UInt8::ConstPtr& message);
+    // Allowing messages to be sent to the arduino too fast causes a disconnect
+    // This is the minimum time between messages to the arduino in microseconds.
+    // Only used with the gripper commands to fix a manual control bug.
+    unsigned int min_usb_send_delay = 100;
 
-int main(int argc, char **argv) {
-    
-    ros::init(argc, argv, "abridge");
-    
-    string devicePath;
-    ros::param::param("~device", devicePath, string("/dev/ttyUSB0"));
-    usb.openUSBPort(devicePath, baud);
-    void modeHandler(const std_msgs::UInt8::ConstPtr& message);
-    
-    sleep(5);
-    
-    ros::NodeHandle aNH;
-    
-    fingerAnglePublish = aNH.advertise<geometry_msgs::QuaternionStamped>("fingerAngle/prev_cmd", 10);
-    wristAnglePublish = aNH.advertise<geometry_msgs::QuaternionStamped>("wristAngle/prev_cmd", 10);
-    imuRawPublish = aNH.advertise<swarmie_msgs::SwarmieIMU>("imu/raw", 10);
-    odomPublish = aNH.advertise<nav_msgs::Odometry>("odom", 10);
-    sonarLeftPublish = aNH.advertise<sensor_msgs::Range>("sonarLeft", 10);
-    sonarCenterPublish = aNH.advertise<sensor_msgs::Range>("sonarCenter", 10);
-    sonarRightPublish = aNH.advertise<sensor_msgs::Range>("sonarRight", 10);
-    infoLogPublisher = aNH.advertise<std_msgs::String>("/infoLog", 1, true);
-    debugPIDPublisher = aNH.advertise<bridge::PidState>("bridge/debugPID", 1, false);
-    heartbeatPublisher = aNH.advertise<std_msgs::String>("bridge/heartbeat", 1, true);
+    float heartbeat_publish_interval = 2;
 
-    driveControlSubscriber = aNH.subscribe("driveControl", 10, driveCommandHandler);
-    fingerAngleSubscriber = aNH.subscribe("fingerAngle/cmd", 1, fingerAngleHandler);
-    wristAngleSubscriber = aNH.subscribe("wristAngle/cmd", 1, wristAngleHandler);
-    modeSubscriber = aNH.subscribe("mode", 1, modeHandler);
+    const double wheelBase = 0.278; //distance between left and right wheels (in M)
+    const double leftWheelCircumference = 0.3651; // avg for 3 rovers (in M)
+    const double rightWheelCircumference = 0.3662; // avg for 3 rovers (in M)
+    const int cpr = 8400; //"cycles per revolution" -- number of encoder increments per one wheel revolution
 
-    publishTimer = aNH.createTimer(ros::Duration(deltaTime), serialActivityTimer);
-    publish_heartbeat_timer = aNH.createTimer(ros::Duration(heartbeat_publish_interval), publishHeartBeatTimerEventHandler);
-    
-    ros::param::param<std::string>("odom_frame", odom.header.frame_id, "odom");
-    ros::param::param<std::string>("base_link_frame", odom.child_frame_id, "base_link");
-    ros::param::param<std::string>("sonar_left_frame", sonarLeft.header.frame_id, "us_left_link");
-    ros::param::param<std::string>("sonar_center_frame", sonarCenter.header.frame_id, "us_center_link");
-    ros::param::param<std::string>("sonar_right_frame", sonarRight.header.frame_id, "us_right_link");
-    imuRaw.header.frame_id = odom.child_frame_id;
+    // running counts of encoder ticks
+    double leftTicks = 0;
+    double rightTicks = 0;
+    // wheel velocities in ticks/sec
+    double leftTickVel = 0;
+    double rightTickVel = 0;
+    double odomTS = 0;
 
-    // configure dynamic reconfiguration
-    dynamic_reconfigure::Server<bridge::pidConfig> config_server;
-    dynamic_reconfigure::Server<bridge::pidConfig>::CallbackType f;
-    f = boost::bind(&reconfigure, _1, _2);
-    config_server.setCallback(f);
+    // Immobilize robot until the first PID configuration.
+    PID left_pid = PID(0, 0, 0, 0, 120, -120, 0, -1);
+    PID right_pid = PID(0, 0, 0, 0, 120, -120, 0, -1);
 
-    boost::thread t(initialconfig);
-    ros::spin();
-    
-    return EXIT_SUCCESS;
-}
+    //Publishers
+    rclcpp::Publisher<geometry_msgs::msg::QuaternionStamped>::SharedPtr fingerAnglePublish;
+    rclcpp::Publisher<geometry_msgs::msg::QuaternionStamped>::SharedPtr wristAnglePublish;
+    rclcpp::Publisher<swarmie_msgs::msg::SwarmieIMU>::SharedPtr imuRawPublish;
+    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odomPublish;
+    rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr sonarLeftPublish;
+    rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr sonarCenterPublish;
+    rclcpp::Publisher<sensor_msgs::msg::Range>::SharedPtr sonarRightPublish;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr infoLogPublisher;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr heartbeatPublisher;
+    rclcpp::Publisher<swarmie_msgs::msg::PidState>::SharedPtr debugPIDPublisher;
 
-void reconfigure(bridge::pidConfig &cfg, uint32_t level) {
-	double p, i, d, db, st, wu;
-	p = cfg.groups.pid.Kp * cfg.groups.pid.scale;
-	i = cfg.groups.pid.Ki * cfg.groups.pid.scale;
-	d = cfg.groups.pid.Kd * cfg.groups.pid.scale;
-	db = cfg.groups.pid.db;
-	st = cfg.groups.pid.st;
-	wu = cfg.groups.pid.wu;
-	ff_l = cfg.groups.pid.ff_l;
-	ff_r = cfg.groups.pid.ff_r;
+    //rclcpp::Publisher debugPIDPublisher;
+    swarmie_msgs::msg::PidState pid_state;
 
-	left_pid.reconfig(p, i, d, db, st, wu);
-	right_pid.reconfig(p, i, d, db, st, wu);
+    //Subscribers
+    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr driveControlSubscriber;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr  fingerAngleSubscriber;
+    rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr  wristAngleSubscriber;
+    rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr  modeSubscriber;
 
-	std_msgs::String msg;
-	msg.data = "PID reconfigure is done.";
-	infoLogPublisher.publish(msg);
-}
+    //Timers
+    //rclcpp::Timer publishTimer;
+    //rclcpp::Timer publish_heartbeat_timer;
 
-void driveCommandHandler(const geometry_msgs::Twist::ConstPtr& message) {
+    // Feed-forward constants
+    double ff_l;
+    double ff_r;
+
+    //void publishRosTopics();
+};
+
+int main(int argc, char * argv[]){
+    rclcpp::init(argc, argv);
+    rclcpp::spin(std::make_shared<abridge>());
+    rclcpp::shutdown();
+    return 0;
+} //end main
+
+void abridge::driveCommandHandler(const geometry_msgs::msg::Twist::SharedPtr message) {
   speedCommand.linear.x = message->linear.x;
   speedCommand.angular.z = message->angular.z;
   speedCommand.angular.y = message->angular.y;
@@ -194,7 +194,7 @@ void driveCommandHandler(const geometry_msgs::Twist::ConstPtr& message) {
 // The finger and wrist handlers receive gripper angle commands in floating point
 // radians, write them to a string and send that to the arduino
 // for processing.
-void fingerAngleHandler(const std_msgs::Float32::ConstPtr& angle) {
+void abridge::fingerAngleHandler(const std_msgs::msg::Float32::SharedPtr angle) {
 
   // To throttle the message rate so we don't lose connection to the arduino
   usleep(min_usb_send_delay);
@@ -212,7 +212,7 @@ void fingerAngleHandler(const std_msgs::Float32::ConstPtr& angle) {
   memset(&cmd, '\0', sizeof (cmd));
 }
 
-void wristAngleHandler(const std_msgs::Float32::ConstPtr& angle) {
+void abridge::wristAngleHandler(const std_msgs::msg::Float32::SharedPtr angle) {
   // To throttle the message rate so we don't lose connection to the arduino
   usleep(min_usb_send_delay);
   
@@ -230,35 +230,35 @@ void wristAngleHandler(const std_msgs::Float32::ConstPtr& angle) {
 }
 
 
-double leftTicksToMeters(double leftTicks) {
-	return (leftWheelCircumference * leftTicks) / cpr;
+double abridge::leftTicksToMeters(double leftTicks_arg) const {
+	return (leftWheelCircumference * leftTicks_arg) / cpr;
 }
 
-double rightTicksToMeters(double rightTicks) {
-	return (rightWheelCircumference * rightTicks) / cpr;
+double abridge::rightTicksToMeters(double rightTicks_arg) const {
+	return (rightWheelCircumference * rightTicks_arg) / cpr;
 }
 
-double metersToTicks(double meters) {
+double abridge::metersToTicks(double meters) const {
     return (meters * cpr) / ((leftWheelCircumference + rightWheelCircumference) / 2);
 }
 
-double leftMetersToTicks(double meters) {
+double abridge::leftMetersToTicks(double meters) const {
     return (meters * cpr) / leftWheelCircumference;
 }
 
-double rightMetersToTicks(double meters) {
+double abridge::rightMetersToTicks(double meters) const {
     return (meters * cpr) / rightWheelCircumference;
 }
 
-double diffToTheta(double right, double left) {
+double abridge::diffToTheta(double right, double left) const {
 	return (right - left) / wheelBase;
 }
 
-double thetaToDiff(double theta) {
+double abridge::thetaToDiff(double theta) const {
 	return theta * wheelBase;
 }
 
-void serialActivityTimer(const ros::TimerEvent& e) {
+void abridge::serialActivityTimer() {
 
 	int cmd_mode = round(speedCommand.angular.y);
 
@@ -287,7 +287,7 @@ void serialActivityTimer(const ros::TimerEvent& e) {
 
 		// Debugging: Report PID performance for tuning.
 		// Output of the PID is in Linear:
-		pid_state.header.stamp = ros::Time::now();
+		pid_state.header.stamp = this->get_clock()->now();
 		pid_state.left_wheel.output = l; // sp_linear * ff
 		pid_state.right_wheel.output = r;
 		pid_state.left_wheel.error = left_sp - leftTickVel; // sp - feedback
@@ -306,7 +306,7 @@ void serialActivityTimer(const ros::TimerEvent& e) {
 		pid_state.angular_setpoint = angular_sp;
 		pid_state.left_wheel.feedback = leftTickVel;
 		pid_state.right_wheel.feedback = rightTickVel;
-		debugPIDPublisher.publish(pid_state);
+		debugPIDPublisher->publish(pid_state);
 
 		sprintf(moveCmd, "v,%d,%d\n", l, r); //format data for arduino into c string
 		usb.sendData(moveCmd);                      //send movement command to arduino over usb
@@ -318,23 +318,23 @@ void serialActivityTimer(const ros::TimerEvent& e) {
 		parseData(usb.readData());
 		publishRosTopics();
 	} catch (std::exception &e) {
-		ROS_WARN("Exception while parsing Arduino data. Probably IMU.");
+        RCLCPP_WARN(this->get_logger(), "Exception while parsing Arduino data. Probably IMU.");
 	}
 }
 
-void publishRosTopics() {
+void abridge::publishRosTopics() {
 	/*
-    fingerAnglePublish.publish(fingerAngle);
-    wristAnglePublish.publish(wristAngle);
-    imuRawPublish.publish(imuRaw);
-    odomPublish.publish(odom);
-    sonarLeftPublish.publish(sonarLeft);
-    sonarCenterPublish.publish(sonarCenter);
-    sonarRightPublish.publish(sonarRight);
+    fingerAnglePublish->publish(fingerAngle);
+    wristAnglePublish->publish(wristAngle);
+    imuRawPublish->publish(imuRaw);
+    odomPublish->publish(odom);
+    sonarLeftPublish->publish(sonarLeft);
+    sonarCenterPublish->publish(sonarCenter);
+    sonarRightPublish->publish(sonarRight);
     */
 }
 
-void parseData(string str) {
+void abridge::parseData(string str) {
     istringstream oss(str);
     string sentence;
     static double lastOdomTS = 0;
@@ -351,31 +351,35 @@ void parseData(string str) {
 		if (dataSet.size() >= 3 && dataSet.at(1) == "1") {
 
 			if (dataSet.at(0) == "GRF") {
-				fingerAngle.header.stamp = ros::Time::now();
-				fingerAngle.quaternion = tf::createQuaternionMsgFromRollPitchYaw(atof(dataSet.at(2).c_str()), 0.0, 0.0);
+				fingerAngle.header.stamp = this->get_clock()->now();
+                tf2::Quaternion quat_tf;
+                quat_tf.setRPY(strtod(dataSet.at(2).c_str(), nullptr), 0.0, 0.0);
+                fingerAngle.quaternion =  tf2::toMsg(quat_tf);
             }
 			else if (dataSet.at(0) == "GRW") {
-				wristAngle.header.stamp = ros::Time::now();
-				wristAngle.quaternion = tf::createQuaternionMsgFromRollPitchYaw(atof(dataSet.at(2).c_str()), 0.0, 0.0);
+				wristAngle.header.stamp = this->get_clock()->now();
+                tf2::Quaternion quat_tf;
+                quat_tf.setRPY(strtod(dataSet.at(2).c_str(), nullptr), 0.0, 0.0);
+                wristAngle.quaternion =  tf2::toMsg(quat_tf);
 			}
 			else if (dataSet.at(0) == "IMU") {
-				imuRaw.header.stamp = ros::Time::now();
-				imuRaw.accelerometer.x = atof(dataSet.at(2).c_str());
-				imuRaw.accelerometer.y  = atof(dataSet.at(3).c_str());
-				imuRaw.accelerometer.z = atof(dataSet.at(4).c_str());
-				imuRaw.magnetometer.x = atof(dataSet.at(5).c_str());
-				imuRaw.magnetometer.y = atof(dataSet.at(6).c_str());
-				imuRaw.magnetometer.z = atof(dataSet.at(7).c_str());
-				imuRaw.angular_velocity.x = atof(dataSet.at(8).c_str());
-				imuRaw.angular_velocity.y = atof(dataSet.at(9).c_str());
-				imuRaw.angular_velocity.z = atof(dataSet.at(10).c_str());
+				imuRaw.header.stamp = this->get_clock()->now();
+				imuRaw.accelerometer.x = strtod(dataSet.at(2).c_str(), nullptr);
+				imuRaw.accelerometer.y  = strtod(dataSet.at(3).c_str(), nullptr);
+				imuRaw.accelerometer.z = strtod(dataSet.at(4).c_str(), nullptr);
+				imuRaw.magnetometer.x = strtod(dataSet.at(5).c_str(), nullptr);
+				imuRaw.magnetometer.y = strtod(dataSet.at(6).c_str(), nullptr);
+				imuRaw.magnetometer.z = strtod(dataSet.at(7).c_str(), nullptr);
+				imuRaw.angular_velocity.x = strtod(dataSet.at(8).c_str(), nullptr);
+				imuRaw.angular_velocity.y = strtod(dataSet.at(9).c_str(), nullptr);
+				imuRaw.angular_velocity.z = strtod(dataSet.at(10).c_str(), nullptr);
 
-			    imuRawPublish.publish(imuRaw);
+			    imuRawPublish->publish(imuRaw);
 			}
 			else if (dataSet.at(0) == "ODOM") {
-				leftTicks = atoi(dataSet.at(2).c_str());
-				rightTicks = atoi(dataSet.at(3).c_str());
-				odomTS = atof(dataSet.at(4).c_str()) / 1000; // Seconds
+				leftTicks = strtol(dataSet.at(2).c_str(), nullptr, 10);
+				rightTicks = strtol(dataSet.at(3).c_str(), nullptr, 10);
+				odomTS = strtod(dataSet.at(4).c_str(), nullptr) / 1000; // Seconds
 
                 double rightWheelDistance = rightTicksToMeters(rightTicks);
 
@@ -413,59 +417,63 @@ void parseData(string str) {
 			    }
 		    	lastOdomTS = odomTS;
 
-				odom.header.stamp = ros::Time::now();
+				odom.header.stamp = this->get_clock()->now();
 				odom.pose.pose.position.x += poseX;
 				odom.pose.pose.position.y += poseY;
 				odom.pose.pose.position.z = 0;
-				odom.pose.pose.orientation = tf::createQuaternionMsgFromYaw(odomTheta);
+
+                tf2::Quaternion quat_tf;
+                quat_tf.setRPY(0,0, odomTheta);
+				odom.pose.pose.orientation = tf2::toMsg(quat_tf);
 
 				odom.twist.twist.linear.x = vx;
 				odom.twist.twist.linear.y = vy;
 				odom.twist.twist.angular.z = vtheta;
 
-			    odomPublish.publish(odom);
+			    odomPublish->publish(odom);
 			}
 			else if (dataSet.at(0) == "USL") {
-				sonarLeft.header.stamp = ros::Time::now();
+				sonarLeft.header.stamp = this->get_clock()->now();
 				//From https://www.pololu.com/product/1605
 				sonarLeft.max_range = 3; //in meters Test Value @TODO tune
 				sonarLeft.field_of_view = 0.698132; // in radians @TODO tune
-				sonarLeft.range = atof(dataSet.at(2).c_str()) / 100.0;
-			    sonarLeftPublish.publish(sonarLeft);
+				sonarLeft.range = strtod(dataSet.at(2).c_str(), nullptr) / 100.0;
+			    sonarLeftPublish->publish(sonarLeft);
 			}
 			else if (dataSet.at(0) == "USC") {
-				sonarCenter.header.stamp = ros::Time::now();
+				sonarCenter.header.stamp = this->get_clock()->now();
 				sonarCenter.max_range = 3; //in meters Test Value @TODO tune
 				sonarCenter.field_of_view = 0.698132; // in radians @TODO tune
-				sonarCenter.range = atof(dataSet.at(2).c_str()) / 100.0;
-			    sonarCenterPublish.publish(sonarCenter);
+				sonarCenter.range = strtod(dataSet.at(2).c_str(), nullptr) / 100.0;
+			    sonarCenterPublish->publish(sonarCenter);
 			}
 			else if (dataSet.at(0) == "USR") {
-				sonarRight.header.stamp = ros::Time::now();
+				sonarRight.header.stamp = this->get_clock()->now();
 				sonarRight.max_range = 3; //in meters Test Value @TODO tune
 				sonarRight.field_of_view = 0.698132; // in radians @TODO tune
-				sonarRight.range = atof(dataSet.at(2).c_str()) / 100.0;
-			    sonarRightPublish.publish(sonarRight);
+				sonarRight.range = strtod(dataSet.at(2).c_str(), nullptr) / 100.0;
+			    sonarRightPublish->publish(sonarRight);
 			}
 
 		}
 	}
 }
 
-void modeHandler(const std_msgs::UInt8::ConstPtr& message) {
+void abridge::modeHandler(const std_msgs::msg::UInt8::SharedPtr message) {
 	currentMode = message->data;
 }
 
-void publishHeartBeatTimerEventHandler(const ros::TimerEvent&) {
-    std_msgs::String msg;
+void abridge::publishHeartBeatTimerEventHandler() {
+    std_msgs::msg::String msg;
     msg.data = "";
-    heartbeatPublisher.publish(msg);
+    heartbeatPublisher->publish(msg);
 }
 
+/*
 void initialconfig() {
     // Set PID parameters from the launch configuration
-    bridge::pidConfig initial_config;
-	ros::NodeHandle nh("~");
+    //bridge::pidConfig initial_config;
+	rclcpp::NodeHandle nh("~");
 
 	nh.getParam("scale", initial_config.scale);
 	nh.getParam("Kp", initial_config.Kp);
@@ -478,8 +486,9 @@ void initialconfig() {
 	nh.getParam("ff_r", initial_config.ff_r);
 
 	// Announce the configuration to the server
-	dynamic_reconfigure::Client<bridge::pidConfig> dyn_client("abridge");
-	dyn_client.setConfiguration(initial_config);
+	//dynamic_reconfigure::Client<bridge::pidConfig> dyn_client("abridge");
+	//dyn_client.setConfiguration(initial_config);
 
 	cout << "Initial configuration sent." << endl;
 }
+*/
