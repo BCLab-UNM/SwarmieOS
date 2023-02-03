@@ -40,10 +40,9 @@ using namespace std;
 class abridge : public rclcpp::Node {
 public:
     abridge(): Node("abridge"){
-        string devicePath = "/dev/ttyUSB0";
+        string devicePath = "/dev/ttyACM0"; //Hardcoded for now works fine as there is no GPS, @TODO use the param
         //rclcpp::param::param("~device", devicePath, string("/dev/ttyUSB0"));
         usb.openUSBPort(devicePath, baud);
-
 
         fingerAnglePublish = this->create_publisher<geometry_msgs::msg::QuaternionStamped>("fingerAngle/prev_cmd", 10);
         wristAnglePublish = this->create_publisher<geometry_msgs::msg::QuaternionStamped>("wristAngle/prev_cmd", 10);
@@ -54,25 +53,20 @@ public:
         sonarRightPublish = this->create_publisher<sensor_msgs::msg::Range>("sonarRight", 10);
         infoLogPublisher = this->create_publisher<std_msgs::msg::String>("/infoLog", 1); //@TODO fix qos to be latching if needed
         debugPIDPublisher = this->create_publisher<swarmie_msgs::msg::PidState>("bridge/debugPID", 1); //@TODO fix qos to be latching if needed
-
-        heartbeatPublisher = this->create_publisher<std_msgs::msg::String>("bridge/heartbeat`", 1);
-        //this->create_wall_timer(500ms, std::bind(&abridge::timer_callback, this));
+        heartbeatPublisher = this->create_publisher<std_msgs::msg::String>("bridge/heartbeat", 1);
 
         driveControlSubscriber = this->create_subscription<geometry_msgs::msg::Twist>("driveControl", 10, std::bind(&abridge::driveCommandHandler, this, _1));
         fingerAngleSubscriber = this->create_subscription<std_msgs::msg::Float32>("fingerAngle/cmd", 1, std::bind(&abridge::fingerAngleHandler, this, _1));
         wristAngleSubscriber = this->create_subscription<std_msgs::msg::Float32>("wristAngle/cmd", 1, std::bind(&abridge::wristAngleHandler, this, _1));
         modeSubscriber = this->create_subscription<std_msgs::msg::UInt8>("mode", 1, std::bind(&abridge::modeHandler, this, _1));
 
-        /*
-        this->create_wall_timer(
-                std::chrono::seconds(deltaTime),
-                std::bind(&MyNode::timerCallback, this));
-
-        heartbeat_publish_interval
-                publishTimer = aNH.createTimer(rclcpp::Duration(deltaTime), serialActivityTimer);
-        publish_heartbeat_timer = aNH.createTimer(rclcpp::Duration(heartbeat_publish_interval), publishHeartBeatTimerEventHandler);
-        */
-
+        serialActivityTimerTimer = this->create_wall_timer(deltaTime,
+                                                                std::bind(&abridge::serialActivityTimer,
+                                                                          this));
+        publishHeartBeatTimerEventHandlerTimer = this->create_wall_timer(heartbeat_publish_interval,
+                                                                                          std::bind(
+                                                                                                  &abridge::publishHeartBeatTimerEventHandler,
+                                                                                                  this));
         this->declare_parameter("odom_frame", "odom");
         /*
         rclcpp::param::param<std_msgs::msg::string>("odom_frame", odom.header.frame_id, "odom");
@@ -98,7 +92,10 @@ private:
     char dataCmd[3] = "d\n";
     char moveCmd[16];
     char host[128];
-    const float deltaTime = 0.1; //abridge's update interval
+    chrono::duration<int_least64_t, milli> deltaTime = 100ms; //abridge's update interval
+    chrono::duration<int_least64_t, milli> heartbeat_publish_interval = 2s;
+    rclcpp::TimerBase::SharedPtr serialActivityTimerTimer;
+    rclcpp::TimerBase::SharedPtr publishHeartBeatTimerEventHandlerTimer;
     int currentMode = 0;
     geometry_msgs::msg::Twist speedCommand;
     void driveCommandHandler(const geometry_msgs::msg::Twist::SharedPtr message);
@@ -126,8 +123,6 @@ private:
     // This is the minimum time between messages to the arduino in microseconds.
     // Only used with the gripper commands to fix a manual control bug.
     unsigned int min_usb_send_delay = 100;
-
-    float heartbeat_publish_interval = 2;
 
     const double wheelBase = 0.278; //distance between left and right wheels (in M)
     const double leftWheelCircumference = 0.3651; // avg for 3 rovers (in M)
@@ -261,7 +256,6 @@ double abridge::thetaToDiff(double theta) const {
 void abridge::serialActivityTimer() {
 
 	int cmd_mode = round(speedCommand.angular.y);
-
 	if (cmd_mode == DRIVE_MODE_STOP) {
 		left_pid.reset();
 		right_pid.reset();
