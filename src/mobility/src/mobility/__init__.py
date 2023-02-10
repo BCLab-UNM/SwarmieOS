@@ -5,20 +5,20 @@ namespaces.
 """
 from __future__ import print_function
 
-import threading 
-import math 
-
+import threading
+import math
 from functools import wraps
-
-from nav_msgs.msg import Odometry 
+#from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose2D
 
-def sync(lock):
-    '''This decorator forces serial access based on a package level lock. Crude but effective.''' 
-    def _sync(func) :
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            with lock :
+
+class Sync(object):
+    def __init__(self, lock):
+        self.lock = lock
+
+    def __call__(self, func):
+        def wrapped_f(*args, **kwargs):
+            with self.lock:
                 return func(*args, **kwargs)
-        return wrapper
-    return _sync
+
+        return wrapped_f
