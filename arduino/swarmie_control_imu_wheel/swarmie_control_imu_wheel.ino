@@ -98,7 +98,7 @@ void loop() {
     Serial.print(",");
     Serial.print(gyro.y);
     Serial.print(",");
-    Serial.print(gyro.z);
+    Serial.println(gyro.z);
   } //end if data is good
   
   odom.update();
