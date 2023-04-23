@@ -33,35 +33,28 @@ using namespace std;
 
 //aBridge functions
 void driveCommandHandler(const geometry_msgs::Twist::ConstPtr& message);
-void fingerAngleHandler(const std_msgs::Float32::ConstPtr& angle);
-void wristAngleHandler(const std_msgs::Float32::ConstPtr& angle);
 void serialActivityTimer(const ros::TimerEvent& e);
+void parseData(const ros::TimerEvent& e);
 void publishRosTopics();
-void parseData(string data);
 void initialconfig();
 
 //Globals
-geometry_msgs::QuaternionStamped fingerAngle;
-geometry_msgs::QuaternionStamped wristAngle;
 swarmie_msgs::SwarmieIMU imuRaw;
 nav_msgs::Odometry odom;
 double odomTheta = 0;
-sensor_msgs::Range sonarLeft;
-sensor_msgs::Range sonarCenter;
-sensor_msgs::Range sonarRight;
 USBSerial usb;
-const int baud = 115200;
+const int baud = 460800;
 char dataCmd[] = "d\n";
 char moveCmd[16];
 char host[128];
-const float deltaTime = 0.1; //abridge's update interval
+const float deltaTime = 0.01; //abridge's update interval
 int currentMode = 0;
 geometry_msgs::Twist speedCommand;
 
 // Allowing messages to be sent to the arduino too fast causes a disconnect
 // This is the minimum time between messages to the arduino in microseconds.
 // Only used with the gripper commands to fix a manual control bug.
-unsigned int min_usb_send_delay = 100;
+unsigned int min_usb_send_delay = 10;
 
 float heartbeat_publish_interval = 2;
 
@@ -83,13 +76,8 @@ PID left_pid(0, 0, 0, 0, 120, -120, 0, -1);
 PID right_pid(0, 0, 0, 0, 120, -120, 0, -1);
 
 //Publishers
-ros::Publisher fingerAnglePublish;
-ros::Publisher wristAnglePublish;
 ros::Publisher imuRawPublish;
 ros::Publisher odomPublish;
-ros::Publisher sonarLeftPublish;
-ros::Publisher sonarCenterPublish;
-ros::Publisher sonarRightPublish;
 ros::Publisher infoLogPublisher;
 ros::Publisher heartbeatPublisher;
 
@@ -98,8 +86,6 @@ bridge::PidState pid_state;
 
 //Subscribers
 ros::Subscriber driveControlSubscriber;
-ros::Subscriber fingerAngleSubscriber;
-ros::Subscriber wristAngleSubscriber;
 ros::Subscriber modeSubscriber;
 
 //Timers
@@ -127,21 +113,13 @@ int main(int argc, char **argv) {
     sleep(5);
     
     ros::NodeHandle aNH;
-    
-    fingerAnglePublish = aNH.advertise<geometry_msgs::QuaternionStamped>("fingerAngle/prev_cmd", 10);
-    wristAnglePublish = aNH.advertise<geometry_msgs::QuaternionStamped>("wristAngle/prev_cmd", 10);
     imuRawPublish = aNH.advertise<swarmie_msgs::SwarmieIMU>("imu/raw", 10);
     odomPublish = aNH.advertise<nav_msgs::Odometry>("odom", 10);
-    sonarLeftPublish = aNH.advertise<sensor_msgs::Range>("sonarLeft", 10);
-    sonarCenterPublish = aNH.advertise<sensor_msgs::Range>("sonarCenter", 10);
-    sonarRightPublish = aNH.advertise<sensor_msgs::Range>("sonarRight", 10);
     infoLogPublisher = aNH.advertise<std_msgs::String>("/infoLog", 1, true);
     debugPIDPublisher = aNH.advertise<bridge::PidState>("bridge/debugPID", 1, false);
     heartbeatPublisher = aNH.advertise<std_msgs::String>("bridge/heartbeat", 1, true);
 
     driveControlSubscriber = aNH.subscribe("driveControl", 10, driveCommandHandler);
-    fingerAngleSubscriber = aNH.subscribe("fingerAngle/cmd", 1, fingerAngleHandler);
-    wristAngleSubscriber = aNH.subscribe("wristAngle/cmd", 1, wristAngleHandler);
     modeSubscriber = aNH.subscribe("mode", 1, modeHandler);
 
     publishTimer = aNH.createTimer(ros::Duration(deltaTime), serialActivityTimer);
@@ -149,9 +127,6 @@ int main(int argc, char **argv) {
     
     ros::param::param<std::string>("odom_frame", odom.header.frame_id, "odom");
     ros::param::param<std::string>("base_link_frame", odom.child_frame_id, "base_link");
-    ros::param::param<std::string>("sonar_left_frame", sonarLeft.header.frame_id, "us_left_link");
-    ros::param::param<std::string>("sonar_center_frame", sonarCenter.header.frame_id, "us_center_link");
-    ros::param::param<std::string>("sonar_right_frame", sonarRight.header.frame_id, "us_right_link");
     imuRaw.header.frame_id = odom.child_frame_id;
 
     // configure dynamic reconfiguration
@@ -190,45 +165,6 @@ void driveCommandHandler(const geometry_msgs::Twist::ConstPtr& message) {
   speedCommand.angular.z = message->angular.z;
   speedCommand.angular.y = message->angular.y;
 }
-
-// The finger and wrist handlers receive gripper angle commands in floating point
-// radians, write them to a string and send that to the arduino
-// for processing.
-void fingerAngleHandler(const std_msgs::Float32::ConstPtr& angle) {
-
-  // To throttle the message rate so we don't lose connection to the arduino
-  usleep(min_usb_send_delay);
-  
-  char cmd[16]={'\0'};
-
-  // Avoid dealing with negative exponents which confuse the conversion to string by checking if the angle is small
-  if (angle->data < 0.01) {
-    // 'f' indicates this is a finger command to the arduino
-    sprintf(cmd, "f,0\n");
-  } else {
-    sprintf(cmd, "f,%.4g\n", angle->data);
-  }
-  usb.sendData(cmd);
-  memset(&cmd, '\0', sizeof (cmd));
-}
-
-void wristAngleHandler(const std_msgs::Float32::ConstPtr& angle) {
-  // To throttle the message rate so we don't lose connection to the arduino
-  usleep(min_usb_send_delay);
-  
-    char cmd[16]={'\0'};
-
-    // Avoid dealing with negative exponents which confuse the conversion to string by checking if the angle is small
-  if (angle->data < 0.01) {
-    // 'w' indicates this is a wrist command to the arduino
-    sprintf(cmd, "w,0\n");
-  } else {
-    sprintf(cmd, "w,%.4g\n", angle->data);
-  }
-  usb.sendData(cmd);
-  memset(&cmd, '\0', sizeof (cmd));
-}
-
 
 double leftTicksToMeters(double leftTicks) {
 	return (leftWheelCircumference * leftTicks) / cpr;
@@ -312,30 +248,12 @@ void serialActivityTimer(const ros::TimerEvent& e) {
 		usb.sendData(moveCmd);                      //send movement command to arduino over usb
 		memset(&moveCmd, '\0', sizeof (moveCmd));   //clear the movement command string
 	}
-
 	usb.sendData(dataCmd);
-	try {
-		parseData(usb.readData());
-		publishRosTopics();
-	} catch (std::exception &e) {
-		ROS_WARN("Exception while parsing Arduino data. Probably IMU.");
-	}
 }
 
-void publishRosTopics() {
-	/*
-    fingerAnglePublish.publish(fingerAngle);
-    wristAnglePublish.publish(wristAngle);
-    imuRawPublish.publish(imuRaw);
-    odomPublish.publish(odom);
-    sonarLeftPublish.publish(sonarLeft);
-    sonarCenterPublish.publish(sonarCenter);
-    sonarRightPublish.publish(sonarRight);
-    */
-}
-
-void parseData(string str) {
-    istringstream oss(str);
+void parseData() {
+    try {
+    istringstream oss(usb.readData());
     string sentence;
     static double lastOdomTS = 0;
 
@@ -349,16 +267,7 @@ void parseData(string str) {
 		}
 
 		if (dataSet.size() >= 3 && dataSet.at(1) == "1") {
-
-			if (dataSet.at(0) == "GRF") {
-				fingerAngle.header.stamp = ros::Time::now();
-				fingerAngle.quaternion = tf::createQuaternionMsgFromRollPitchYaw(atof(dataSet.at(2).c_str()), 0.0, 0.0);
-            }
-			else if (dataSet.at(0) == "GRW") {
-				wristAngle.header.stamp = ros::Time::now();
-				wristAngle.quaternion = tf::createQuaternionMsgFromRollPitchYaw(atof(dataSet.at(2).c_str()), 0.0, 0.0);
-			}
-			else if (dataSet.at(0) == "IMU") {
+            if (dataSet.at(0) == "IMU") {
 				imuRaw.header.stamp = ros::Time::now();
 				imuRaw.accelerometer.x = atof(dataSet.at(2).c_str());
 				imuRaw.accelerometer.y  = atof(dataSet.at(3).c_str());
@@ -425,24 +334,11 @@ void parseData(string str) {
 
 			    odomPublish.publish(odom);
 			}
-			else if (dataSet.at(0) == "USL") {
-				sonarLeft.header.stamp = ros::Time::now();
-				sonarLeft.range = atof(dataSet.at(2).c_str()) / 100.0;
-			    sonarLeftPublish.publish(sonarLeft);
-			}
-			else if (dataSet.at(0) == "USC") {
-				sonarCenter.header.stamp = ros::Time::now();
-				sonarCenter.range = atof(dataSet.at(2).c_str()) / 100.0;
-			    sonarCenterPublish.publish(sonarCenter);
-			}
-			else if (dataSet.at(0) == "USR") {
-				sonarRight.header.stamp = ros::Time::now();
-				sonarRight.range = atof(dataSet.at(2).c_str()) / 100.0;
-			    sonarRightPublish.publish(sonarRight);
-			}
-
 		}
 	}
+    } catch (std::exception &e) {
+        ROS_WARN("Exception while parsing Arduino data. Probably IMU.");
+    }
 }
 
 void modeHandler(const std_msgs::UInt8::ConstPtr& message) {
