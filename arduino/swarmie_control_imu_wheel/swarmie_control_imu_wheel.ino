@@ -36,7 +36,6 @@ byte leftEncoderA = 0;
 byte leftEncoderB = 1;
 
 //Serial (USB <--> Intel NUC)
-String rxBuffer;
 unsigned long watchdogTimer = 1000; //fail-safe in case of communication link failure (in ms)
 unsigned long lastCommTime = 0; //time of last communication from NUC (in ms)
 
@@ -52,7 +51,7 @@ Odometry odom = Odometry(rightEncoderA, rightEncoderB, leftEncoderA, leftEncoder
 LSM303::vector<int16_t> acc;
 L3G::vector<int16_t> gyro;
 LSM303::vector<int16_t> mag;
-void parse();
+
 /////////////
 ////Setup////
 /////////////
@@ -63,7 +62,6 @@ void setup()
   while (!Serial) {} //wait for Serial to complete initialization before moving on
   Wire.begin();
   if (imuStatus()) {imuInit();}
-  rxBuffer = "";
 }
 
 
@@ -111,45 +109,28 @@ void loop() {
                
   if (Serial.available()) {
     char c = Serial.read();
-    if (c == ',' || c == '\n') {
-      parse();
-      rxBuffer = "";
+      if (c == 'v') {
+        int speedL = Serial.parseInt();
+        int speedR = Serial.parseInt();
+        
+        if (speedL >= 0 && speedR >= 0) {
+          move.forward(speedL, speedR);
+        }
+        else if (speedL <= 0 && speedR <= 0) {
+          move.backward(speedL*-1, speedR*-1);
+        }
+        else if (speedL <= 0 && speedR >= 0) {
+          move.rotateLeft(speedL*-1, speedR);
+        }
+        else {
+          move.rotateRight(speedL, speedR*-1);
+        }
+      }
+      else if (c == 's') {move.stop();}
       lastCommTime = millis();
-    }
-    else if (c > 0) {
-      rxBuffer += c;
-    }
   }
   if (millis() - lastCommTime > watchdogTimer) { move.stop(); }
 } //end loop function
-
-
-////////////////////////
-//Parse receive buffer//
-////////////////////////
-
-void parse() {
-  if (rxBuffer == "v") {
-    int speedL = Serial.parseInt();
-    int speedR = Serial.parseInt();
-    
-    if (speedL >= 0 && speedR >= 0) {
-      move.forward(speedL, speedR);
-    }
-    else if (speedL <= 0 && speedR <= 0) {
-      move.backward(speedL*-1, speedR*-1);
-    }
-    else if (speedL <= 0 && speedR >= 0) {
-      move.rotateLeft(speedL*-1, speedR);
-    }
-    else {
-      move.rotateRight(speedL, speedR*-1);
-    }
-  }
-  else if (rxBuffer == "s") {
-    move.stop();
-  }
-}
 
 
 ////////////////////////////
