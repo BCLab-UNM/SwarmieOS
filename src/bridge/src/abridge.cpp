@@ -1,4 +1,5 @@
-#include <math.h>
+#include <iostream>
+#include <cmath>
 #include <ros/ros.h>
 
 #include <boost/thread.hpp>
