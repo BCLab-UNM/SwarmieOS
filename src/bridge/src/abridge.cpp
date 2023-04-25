@@ -275,7 +275,7 @@ void parseData(const ros::TimerEvent& e){
             dataSet.push_back(token);
         }
         if (dataSet.size() >= 3 && dataSet.at(1) == "1") {
-            if (dataSet.at(0) == "IMU") {
+            if ((dataSet.at(0) == "IMU")&&(dataSet.size() == 11)) {
                 imuRaw.header.stamp = ros::Time::now();
                 imuRaw.accelerometer.x = atof(dataSet.at(2).c_str());
                 imuRaw.accelerometer.y  = atof(dataSet.at(3).c_str());
@@ -289,7 +289,7 @@ void parseData(const ros::TimerEvent& e){
 
                 imuRawPublish.publish(imuRaw);
             }
-            else if (dataSet.at(0) == "ODOM") {
+            else if ((dataSet.at(0) == "ODOM")&&(dataSet.size() == 5)) {
                 leftTicks = atoi(dataSet.at(2).c_str());
                 rightTicks = atoi(dataSet.at(3).c_str());
                 odomTS = atof(dataSet.at(4).c_str()) / 1000; // Seconds
