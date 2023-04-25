@@ -43,9 +43,9 @@ fi
 
 echo Using Arduino executable: $arduino
 
-if [ -f $projdir/arduino/swarmie_control/swarmie_control.ino ]; then
+if [ -f $projdir/arduino/swarmie_control_imu_wheel/swarmie_control_imu_wheel.ino ]; then
     repo=$(realpath $projdir/arduino)
-elif [ -f $(catkin locate)/arduino/swarmie_control/swarmie_control.ino ]; then
+elif [ -f $(catkin locate)/arduino/swarmie_control_imu_wheel/swarmie_control_imu_wheel.ino ]; then
     repo=$(catkin locate)/arduino
 else
     echo "Couldn't locate Arduino sketch."
