@@ -1,0 +1,28 @@
+[swarmiesg1]
+r1.local
+r2.local
+r3.local
+r4.local
+r11.local
+
+[swarmiesg2]
+r15.local
+r17.local
+r19.local
+r20.local
+
+[demo0]
+demo0.local
+demo1.local
+demo2.local
+demo3.local
+
+[demo1]
+demo4.local
+demo5.local
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3
+ansible_ssh_user=swarmie
+host_key_checking = False
+forks = 10

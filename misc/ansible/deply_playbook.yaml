@@ -1,0 +1,12 @@
+---
+- hosts: swarmiesg1,swarmiesg2
+  name: swarmie deploy
+  become: yes
+  tasks:
+        - name: node launch
+          ansible.builtin.shell: source /opt/ros/kinetic/setup.bash && ./misc/rover_onboard_node_launch.sh -s
+          args:
+            chdir: /home/swarmie/SwarmieOS/
+            executable: /bin/bash
+          become: yes
+          become_user: swarmie

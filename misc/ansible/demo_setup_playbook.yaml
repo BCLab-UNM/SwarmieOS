@@ -1,0 +1,29 @@
+---
+- name: Git Pull n checkout ess and catkin Build
+  hosts: demo0:demo1
+  become: true
+  become_user: swarmie
+
+  tasks:
+    - name: Git Pull n checkout
+      git:
+        repo: https://github.com/BCLab-UNM/SwarmieOS.git
+        dest: /home/swarmie/SwarmieOS/
+        version: ess
+        update: yes
+        
+    - name: catkin build
+      ansible.builtin.shell: source /opt/ros/kinetic/setup.bash && source ./devel/local_setup.bash && catkin build
+      args:
+        chdir: /home/swarmie/SwarmieOS/
+        executable: /bin/bash
+      become: yes
+      become_user: swarmie
+
+    - name: Run deploy_host.sh
+      shell: ./misc/deploy_host.sh r11.local
+      args:
+        chdir: /home/swarmie/SwarmieOS/
+        executable: /bin/bash
+      become: yes
+      become_user: swarmie
