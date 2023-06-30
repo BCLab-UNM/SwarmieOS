@@ -14,46 +14,6 @@ from swarmie_msgs.msg import Obstacle
 
 from mobility.planner import Planner
 from mobility.swarmie import swarmie, TagException, HomeException, ObstacleException, PathException, AbortException, MoveResult
-
-# *********************************************************************************
-# Feel free to add functions, or edit this file in anyways and such to this file
-
-# remeber to use search_exit or return with the approprate exit code
-# search_exit(-1) if something is very broken
-# search_exit(0) found a cube
-# search_exit(1) go back home
-
-# If you have a loop somewhere running your search it would be good to add this line
-# if rospy.is_shutdown(): search_exit(-1)
-# This will tell your search to stop if the robot is shutdown
-
-
-# Notes
-# If you wanted to turn around while ignoreing tags and the sonars it would look like this
-# swarmie.turn(math.pi, ignore=Obstacle.IS_SONAR | Obstacle.VISION_SAFE)
-# Please only ignore things if you absolutely need to, so like 
-
-# If you want to keep one wheel stationary and look do a pivot around it 
-#swarmie.circle()
-
-# If you want to add some randomness like angles
-# random.gauss(math.pi/2, math.pi/4)
-
-# If you want to print out things while your code runs to help you inspect it you can do it like so
-# rospy.loginfo("Stuff you want to print out")
-
-# Drive forward and backward, keep in mind the sonars dont work when driving backward so try to avoid that if you can
-# swarmie.drive(distance)
-
-# If you want to turn so math.pi/2 would be 90 degrees
-# swarmie.turn(rad)
-
-# If you want to use the current heading and save for later
-# prev_heading = swarmie.get_odom_location().get_pose().theta
-# swarmie.set_heading(prev_heading) # you can also use this to turn and can add of subtract angles too
-
-# *********************************************************************************
-
 def search_exit(code):
     global planner, found_tag
     
